@@ -85,7 +85,8 @@ class Inference(object):
         img = img.float()
         img /= 255.
 
-        # 每次初始化防止数据未刷新自己走，可能会慢一些
+        contours = Inference.find_light(frame)
+
         Inference.DEVIATION_X = 0
         Inference.DIRECTION = 0
         Inference.HIGH_EIGHT = 0
@@ -127,42 +128,86 @@ class Inference(object):
                     bottom_left = (int(x_center - width * 0.5), int(y_center + height * 0.5))
                     bottom_right = (int(x_center + width * 0.5), int(y_center + height * 0.5))
                     
-
                     Inference.draw_inference(frame, top_left, top_right, bottom_right, tag, confs, i, mode)
-                    tohsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-                    toinRange = cv2.inRange(tohsv, (0, 0, 236), (160, 89, 255))
-                    contours, _ = cv2.findContours(toinRange, 0, cv2.CHAIN_APPROX_SIMPLE)
-                    
-                    for i in range(0,len(contours)):
-                        re = cv2.boundingRect(contours[i])
-                        top_left_x, top_right_y, w, h = re
-                        center_x, center_y = top_left_x + w / 2, top_right_y + h / 2
-                        if center_x > top_left[0] and  center_y > top_left[1] and center_x < bottom_right[0] and center_y < bottom_right[1] :
-                            rects.append(re)
-                            # cv2.rectangle(frame,re,(255,0,255),3)
 
-                    # 缺少roll轴旋转45度的情况 该怎么计算
-                    top_left_point = Inference.near_compare(rects, top_left, 1)
-                    bottom_left_point = Inference.near_compare(rects, bottom_left, 3)
-                    bottom_right_point = Inference.near_compare(rects, bottom_right, 4)
-                    print(top_left_point, bottom_left_point, bottom_right_point)
-                    distance_level = Inference.compute_distance(bottom_left_point, bottom_right_point)
-                    distance_vertical = Inference.compute_distance(top_left_point, bottom_left_point)
-                    print(distance_vertical, distance_level)
-                    if distance_vertical > distance_level:
-                        pitch_angle = 0
-                    else:
-                        pitch_radians = np.arcsin(distance_vertical/distance_level)
-                        pitch_angle = 90 - Inference.radians_to_angle(pitch_radians)
-                    
-                    if bottom_right_point[1] == bottom_left_point[1]:
-                        roll_angle = 0
-                    else:
-                        k = (bottom_right_point[1] - bottom_left_point[1]) / (bottom_right_point[0] - bottom_left_point[0])
-                        roll_radians = np.arctan(-k)
-                        roll_angle = Inference.radians_to_angle(roll_radians)
+                    if tag == '1':
+                        arr.append(int(x_center - Inference.TARGET_X)) 
+                    elif tag == '0':                
+                        for i in range(0,len(contours)):
+                            rect = cv2.boundingRect(contours[i])
+                            top_left_x, top_right_y, width, height = rect
+                            light_center = top_left_x + width / 2, top_right_y + height / 2
+                            # 筛选灯条
+                            if light_center[0] > top_left[0] and  light_center[1] > top_left[1] and light_center[0] < bottom_right[0] and light_center[1] < bottom_right[1] :
+                                rects.append(rect)
+                                # cv2.rectangle(frame,rect,(255,0,255),3)
+                        rects = Inference.area_compare(rects)
+                        top_left_point = Inference.near_compare(rects, top_left, 1)
+                        top_right_point = Inference.near_compare(rects, top_right, 2)
+                        bottom_left_point = Inference.near_compare(rects, bottom_left, 3)
+                        bottom_right_point = Inference.near_compare(rects, bottom_right, 4)
+                        # 要不要均值处理角度
+                        # distance_level = Inference.compute_distance(bottom_left_point, bottom_right_point)                        
+                        distance_vertical = Inference.compute_distance(top_left_point, bottom_left_point)
+                        distance_level = Inference.compute_distance(top_left_point, top_right_point)
+                        # distance_vertical = Inference.compute_distance(top_right_point, bottom_right_point)
 
-                    print("pitch_angle: ", pitch_angle, "\n", "roll_angle: ", roll_angle)
+                        print(top_left_point, top_right_point, bottom_left_point, bottom_right_point)
+                        print(distance_vertical, distance_level)
+                        if distance_vertical > distance_level:
+                            pitch_angle = 0
+                        else:
+                            pitch_radians = np.arcsin(distance_vertical/distance_level)
+                            pitch_angle = 90 - Inference.radians_to_angle(pitch_radians)
+                        
+                        if bottom_right_point[1] == bottom_left_point[1]:
+                            roll_angle = 0
+                        else:
+                            k = (bottom_right_point[1] - bottom_left_point[1]) / (bottom_right_point[0] - bottom_left_point[0])
+                            # k = (top_right_point[1] - top_left_point[1]) / (top_right_point[0] - top_left_point[0])
+                            roll_radians = np.arctan(-k)
+                            roll_angle = Inference.radians_to_angle(roll_radians)
+                        # 13度是误差极限 还是位置极佳准确的时候
+                        print("pitch_angle: ", pitch_angle, "\n", "roll_angle: ", roll_angle)
+
+                if  tag == '1':
+                    if abs(Inference.radix_sort(arr)[0]) < abs(Inference.radix_sort(arr)[len(arr)-1]):
+                        Inference.DEVIATION_X = Inference.radix_sort(arr)[0]
+                    else:
+                        Inference.DEVIATION_X = Inference.radix_sort(arr)[len(arr)-1]
+
+                    if mode == True:
+                        cv2.putText(frame, "real_x = " + str(Inference.DEVIATION_X), (0, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
+                    Inference.HIGH_EIGHT = (abs(Inference.DEVIATION_X) >> 8) & 0xff
+                    Inference.LOW_EIGHT = abs(Inference.DEVIATION_X)  & 0xff
+                    
+                    if abs(Inference.DEVIATION_X ) < 24:
+                        Inference.DEVIATION_X  = 0
+                    if Inference.DEVIATION_X > 0:
+                        Inference.DIRECTION = 1
+                    Inference.draw_data(frame, img_size, mode)
+                elif tag == '0':
+                    pass
+
+    def find_light(frame):
+        tohsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        toinRange = cv2.inRange(tohsv, (0, 0, 236), (160, 89, 255))
+        contours, _ = cv2.findContours(toinRange, 0, cv2.CHAIN_APPROX_SIMPLE)  
+        return contours
+
+    # 面积筛选 排除roll旋转小灯条的干扰
+    def area_compare(rects):
+        area_lists = []
+        new_rects = []
+        for i in range (0,len(rects)):
+            area_lists.append(rects[i][2] * rects[i][3])
+        temp_lists = Inference.radix_sort(area_lists)[-1:-5:-1]
+        for i in range (0,len(rects)):
+            if rects[i][2] * rects[i][3] in temp_lists:
+                new_rects.append(rects[i])
+        print(new_rects)
+        return new_rects
+
     '''
     1 2
     3 4
@@ -187,9 +232,7 @@ class Inference(object):
                 temp = distance
                 Point.clear()       
                 Point.append(temp_point[0])
-                Point.append(temp_point[1])
-                
-        # print(Point)
+                Point.append(temp_point[1])                
         return Point
         
     def compute_distance(Point1, Point2):

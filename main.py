@@ -20,15 +20,64 @@ def parse_opt():
 
 def run( Inference, is_save = 0, mode = 1):
     
-    frame = cv2.imread("/home/oyc/图片/1.png")
+    frame = cv2.imread("/home/oyc/图片/2.png")
     # frame = cv2.resize(frame,(1280,800))
     Inference.to_inference(frame, Inference.device, Inference.model, Inference.imgsz, Inference.stride, mode=mode)
     cv2.imshow("frame",frame)        
     if (cv2.waitKey(0) & 0xFF) != ord('q'):
         cv2.destroyAllWindows()
+
+    # while (cv2.waitKey(1) & 0xFF) != ord('q'):
+    #     try:
+    #         t2 = time_sync()
+    #         pRawData, FrameHead = mvsdk.CameraGetImageBuffer(Video.hCamera, 200)
+    #         mvsdk.CameraImageProcess(Video.hCamera, pRawData, Video.pFrameBuffer, FrameHead)
+    #         mvsdk.CameraReleaseImageBuffer(Video.hCamera, pRawData)
+    #         frame_data = (mvsdk.c_ubyte * FrameHead.uBytes).from_address(Video.pFrameBuffer)
+    #         frame = np.frombuffer(frame_data, dtype=np.uint8)
+    #         frame = frame.reshape((FrameHead.iHeight, FrameHead.iWidth, 1 if FrameHead.uiMediaType == mvsdk.CAMERA_MEDIA_TYPE_MONO8 else 3) )
+            
+    #         Inference.to_inference(frame, Inference.device, Inference.model, Inference.imgsz, Inference.stride, mode=mode)
+            
+    #         t3 = time_sync()
+
+    #         if Video.IS_SAVE_VIDEO:
+    #             try:                    
+    #                 Video.out.write(frame)
+    #             except:
+    #                 print("Write Frame Error")
+    #         cv2.imshow("frame",frame)
+    #         # print("Inference == " + str(1/(t3 - t2)))
+    #     except mvsdk.CameraException as e:
+    #         if e.error_code != mvsdk.CAMERA_STATUS_TIME_OUT:
+    #             print("CameraGetImageBuffer failed({}): {}".format(e.error_code, e.message) )
+    #         cv2.destroyAllWindows()
+    #         video_capture.Video_capture.__init__(is_save)
+    # if Video.IS_SAVE_VIDEO:
+    #     try:
+    #         Video.out.release()
+    #     except:
+    #         print("Release Frame Error")
+    # cv2.destroyAllWindows()
+    # # 关闭相机
+    # mvsdk.CameraUnInit(Video.hCamera)
+    # # 释放帧缓存
+    # mvsdk.CameraAlignFree(Video.pFrameBuffer)
 if __name__ == "__main__":
     opt = parse_opt()
     Inf = Inference(**vars(opt))    
     run(Inf)
 
+    # opt = parse_opt()
+    # is_save = 0
+    # mode = 0
+    # while video_capture.Video_capture.CAMERA_OPEN == 0:
+    #     Video = video_capture.Video_capture(is_save)
+
+    # Inf = Inference(**vars(opt))
     
+    # Inf_serial = Interactive_serial()
+    # thread1 = threading.Thread(target=(Inf_serial.send_data))
+    # thread1.start()
+    
+    # run(Video,Inf,is_save,mode)
