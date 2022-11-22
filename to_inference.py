@@ -10,6 +10,7 @@ from utils.general import check_img_size,non_max_suppression,scale_coords, xyxy2
 from utils.torch_utils import select_device
 
 
+
 class Inference(object):
     
     DEVIATION_X = 0
@@ -100,9 +101,7 @@ class Inference(object):
         aims = []
         confs = []
         arr = []
-        rects = []
-
-        
+        rects = []  
 
         for i ,det in enumerate(pred): 
             gn = torch.tensor(img0.shape)[[1,0,1,0]]
@@ -114,7 +113,7 @@ class Inference(object):
                     aim = ('%g ' * len(line)).rstrip() % line 
                     aim = aim.split(' ')
                     # 筛选出自信度大于70%
-                    if float(conf) > 0.7:
+                    if float(conf) > 0.85:
                         aims.append(aim)
                         confs.append(float(conf))
 
@@ -127,50 +126,66 @@ class Inference(object):
                     top_right = (int(x_center + width * 0.5), int(y_center - height * 0.5))
                     bottom_left = (int(x_center - width * 0.5), int(y_center + height * 0.5))
                     bottom_right = (int(x_center + width * 0.5), int(y_center + height * 0.5))
-                    
+                    # print(top_left, top_right, bottom_left, bottom_right)
                     Inference.draw_inference(frame, top_left, top_right, bottom_right, tag, confs, i, mode)
-
-                    if tag == '1':
+                    # 识别1得只能有一个出现，得筛一下
+                    if tag == '0':
+                        
                         arr.append(int(x_center - Inference.TARGET_X)) 
-                    elif tag == '0':                
+                    elif tag == '1':                
                         for i in range(0,len(contours)):
                             rect = cv2.boundingRect(contours[i])
                             top_left_x, top_right_y, width, height = rect
                             light_center = top_left_x + width / 2, top_right_y + height / 2
-                            # 筛选灯条
+                            # 筛选灯条  在指定区域内
                             if light_center[0] > top_left[0] and  light_center[1] > top_left[1] and light_center[0] < bottom_right[0] and light_center[1] < bottom_right[1] :
                                 rects.append(rect)
                                 # cv2.rectangle(frame,rect,(255,0,255),3)
-                        rects = Inference.area_compare(rects)
-                        top_left_point = Inference.near_compare(rects, top_left, 1)
-                        top_right_point = Inference.near_compare(rects, top_right, 2)
-                        bottom_left_point = Inference.near_compare(rects, bottom_left, 3)
-                        bottom_right_point = Inference.near_compare(rects, bottom_right, 4)
-                        # 要不要均值处理角度
-                        # distance_level = Inference.compute_distance(bottom_left_point, bottom_right_point)                        
-                        distance_vertical = Inference.compute_distance(top_left_point, bottom_left_point)
-                        distance_level = Inference.compute_distance(top_left_point, top_right_point)
-                        # distance_vertical = Inference.compute_distance(top_right_point, bottom_right_point)
+                        try:
+                            rects = Inference.area_compare(rects)
+                            for i in range (0,len(rects)):
+                                cv2.rectangle(frame,rects[i],(255,0,255),3)
+                            top_left_point = Inference.near_compare(rects, top_left, 1)
+                            top_right_point = Inference.near_compare(rects, top_right, 2)
+                            bottom_left_point = Inference.near_compare(rects, bottom_left, 3)
+                            bottom_right_point = Inference.near_compare(rects, bottom_right, 4)
+                            # 均值处理角度 
+                            distance_level_borrom = Inference.compute_distance(bottom_left_point, bottom_right_point)                        
+                            distance_vertical_left = Inference.compute_distance(top_left_point, bottom_left_point)
+                            distance_level_top = Inference.compute_distance(top_left_point, top_right_point)
+                            distance_vertical_right = Inference.compute_distance(top_right_point, bottom_right_point)
 
-                        print(top_left_point, top_right_point, bottom_left_point, bottom_right_point)
-                        print(distance_vertical, distance_level)
-                        if distance_vertical > distance_level:
-                            pitch_angle = 0
-                        else:
-                            pitch_radians = np.arcsin(distance_vertical/distance_level)
-                            pitch_angle = 90 - Inference.radians_to_angle(pitch_radians)
+                            print(top_left_point, top_right_point, bottom_left_point, bottom_right_point)
+                            # print(distance_vertical_left, distance_vertical_right, distance_level_top, distance_level_borrom)
+                            # 看起来没什么问题,前面偏差相对来说有点大，后面相对较小，补偿不好给（正对兑换站的情况  能识别角度 < 40度的样子
+                            if distance_vertical_left > distance_level_top or distance_vertical_left > distance_level_borrom:                                
+                                pitch_angle = 0
+                            elif distance_vertical_right > distance_level_top or distance_vertical_right > distance_level_borrom:
+                                pitch_angle = 0
+                            else:
+                                pitch_radians0 = np.arcsin(distance_vertical_left / distance_level_top)
+                                pitch_radians1 = np.arcsin(distance_vertical_left / distance_level_borrom)
+                                pitch_radians2 = np.arcsin(distance_vertical_right / distance_level_top)
+                                pitch_radians3 = np.arcsin(distance_vertical_right / distance_level_borrom)
+                                # 还得减去自身角度
+                                pitch_angle = 90 - Inference.radians_to_angle((pitch_radians0 + pitch_radians1  + pitch_radians2 + pitch_radians3)/4) - 29
+                            
+                            # 每5度加1 真实能够检测到的角度 < 40度 （正对兑换站的情况
+                            if bottom_right_point[1] == bottom_left_point[1] or top_right_point[1] == top_left_point[1]:
+                                roll_angle = 0
+                            else:
+                                k0 = (bottom_right_point[1] - bottom_left_point[1]) / (bottom_right_point[0] - bottom_left_point[0])
+                                k1 = (top_right_point[1] - top_left_point[1]) / (top_right_point[0] - top_left_point[0])
+                                roll_radians_k0 = np.arctan(-k0)
+                                roll_radians_k1 = np.arctan(-k1)
+                                roll_angle = Inference.radians_to_angle((roll_radians_k0 + roll_radians_k1)/2)
+                            # 13度是误差极限 还是位置极佳准确的时候
                         
-                        if bottom_right_point[1] == bottom_left_point[1]:
-                            roll_angle = 0
-                        else:
-                            k = (bottom_right_point[1] - bottom_left_point[1]) / (bottom_right_point[0] - bottom_left_point[0])
-                            # k = (top_right_point[1] - top_left_point[1]) / (top_right_point[0] - top_left_point[0])
-                            roll_radians = np.arctan(-k)
-                            roll_angle = Inference.radians_to_angle(roll_radians)
-                        # 13度是误差极限 还是位置极佳准确的时候
-                        print("pitch_angle: ", pitch_angle, "\n", "roll_angle: ", roll_angle)
+                            print("pitch_angle: ", pitch_angle, "\n", "roll_angle: ", roll_angle)
+                        except:
+                            print("No Find Light")
 
-                if  tag == '1':
+                if  tag == '0':
                     if abs(Inference.radix_sort(arr)[0]) < abs(Inference.radix_sort(arr)[len(arr)-1]):
                         Inference.DEVIATION_X = Inference.radix_sort(arr)[0]
                     else:
@@ -186,12 +201,14 @@ class Inference(object):
                     if Inference.DEVIATION_X > 0:
                         Inference.DIRECTION = 1
                     Inference.draw_data(frame, img_size, mode)
-                elif tag == '0':
+                elif tag == '1':
                     pass
-
+    
+    # 只有蓝色的没有红色的，得思考一下怎么加
     def find_light(frame):
         tohsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        toinRange = cv2.inRange(tohsv, (0, 0, 236), (160, 89, 255))
+        # toinRange = cv2.inRange(tohsv, (0, 0, 236), (160, 89, 255))
+        toinRange = cv2.inRange(tohsv, (0, 0, 214), (109, 255, 255))
         contours, _ = cv2.findContours(toinRange, 0, cv2.CHAIN_APPROX_SIMPLE)  
         return contours
 
@@ -205,7 +222,7 @@ class Inference(object):
         for i in range (0,len(rects)):
             if rects[i][2] * rects[i][3] in temp_lists:
                 new_rects.append(rects[i])
-        print(new_rects)
+        # print(new_rects)
         return new_rects
 
     '''
