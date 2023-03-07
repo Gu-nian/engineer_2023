@@ -1,8 +1,8 @@
 import serial
 import time
 
-from to_inference import Inference
-
+from mineral_function import Mineral
+from station_function import Station
 class Interactive_serial(object):
     def __init__(self):
         self.ser = serial.Serial()
@@ -29,30 +29,37 @@ class Interactive_serial(object):
         except:
             self.ser.close()
             print("Serial Reconnection Error")
-    # 串口发送移动信息
-    def send_data(self):
+
+    # 串口发送移动信息 2停 0左 1右
+    def send_mineral_data(self):
         while True:
             time.sleep(0.0005)
             try:
-                if Inference.DEVIATION_X == 0:
-                    self.ser.write(('S' + str(2) + str(0) + str(0) + str(0) + str(0) + 'E').encode("utf-8"))
-                    
-                elif   Inference.LOW_EIGHT / 100 >= 1:
-                    self.ser.write(('S' + str(Inference.DIRECTION) + str(Inference.HIGH_EIGHT) + str(Inference.LOW_EIGHT) + 'E').encode("utf-8"))
-
-                elif Inference.LOW_EIGHT / 10 >= 1:
-                    self.ser.write(('S' + str(Inference.DIRECTION) + str(Inference.HIGH_EIGHT) + str(0) + str(Inference.LOW_EIGHT) + 'E').encode("utf-8"))
-
-                elif Inference.LOW_EIGHT / 1 >= 1:
-                    self.ser.write(('S' + str(Inference.DIRECTION) + str(Inference.HIGH_EIGHT) + str(0) + str(0) + str(Inference.LOW_EIGHT) + 'E').encode("utf-8"))
-
+                if Mineral.deviation_x == 0:
+                    self.ser.write(('S' + str(2) + str(0) + str(0) + str(0) + 'E').encode("utf-8"))
+                elif Mineral.deviation_x / 100 >= 1:
+                    self.ser.write(('S' + str(Mineral.direction) + str(Mineral.deviation_x) + 'E').encode("uft-8"))
+                elif Mineral.deviation_x / 10 >= 1:
+                    self.ser.write(('S' + str(Mineral.direction) + str(0) + str(Mineral.deviation_x) + 'E').encode("uft-8"))
+                elif Mineral.deviation_x / 1 >= 1:
+                    self.ser.write(('S' + str(Mineral.direction) + str(0) + str(0) + str(Mineral.deviation_x) + 'E').encode("uft-8"))
                 else:
-                    self.ser.write(('S' + str(2) + str(0) + str(0) + str(0) + str(0) + 'E').encode("utf-8"))
+                    self.ser.write(('S' + str(2) + str(0) + str(0) + str(0) + 'E').encode("utf-8"))
             except:
                 self.ser.close()
-                print('Serial Send Data Error')
+                print('Serial Send Mineral Data Error')
                 Interactive_serial.serial_connection(self)
-                
+    
+    def send_station_data(self):
+        while True:
+            time.sleep(0.0005)
+            try:
+                if Station.deviation_x == 0:
+                    self.ser.write(('S' + str(2) + str(0) + str(0) + str(0) + 'E').encode("utf-8"))
+            except:
+                self.ser.close()
+                print('Serial Send Station Data Error')
+                Interactive_serial.serial_connection(self)
     # 串口接收数据
     # def receive_data(self):
     #     while True:
@@ -60,16 +67,16 @@ class Interactive_serial(object):
     #         try:
     #             data = self.ser.read(3)
     #             if data == b'\x03\x03\x03' or data == b'\x01\x01\x01':
-    #                 Inference.TARGET_X = 480  #空接 不抬升500 抬升480 
-    #                 Inference.FLAG = 1
+    #                 Mineral.TARGET_X = 480  #空接 不抬升500 抬升480 
+    #                 Mineral.FLAG = 1
     #                 # print(data)
     #             if data == b'\x02\x02\x02':
-    #                 Inference.TARGET_X = 415  #资源岛
-    #                 Inference.FLAG = 0
+    #                 Mineral.TARGET_X = 415  #资源岛
+    #                 Mineral.FLAG = 0
     #                 # print(data)
     #             print(data)
     #         except:                
     #             self.ser.close()
     #             print('Serial Send Data Error')
-    #             Inference.serial_connection(self)
+    #             Mineral.serial_connection(self)
                 

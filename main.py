@@ -1,8 +1,7 @@
 import argparse
 import threading
-import numpy as np
-
 import cv2
+import numpy as np
 
 import video_capture  
 import mvsdk
@@ -14,7 +13,7 @@ from use_serial import Interactive_serial
 def parse_opt():
     parser = argparse.ArgumentParser()
     # 自启动 default 要改成绝对路径
-    parser.add_argument('--weights', nargs='+', type=str, default='/home/oyc/workspace/yolov5/runs/train/exp28/weights/best.pt', help='model path(s)')
+    parser.add_argument('--weights', nargs='+', type=str, default='./station.pt', help='model path(s)')
     opt = parser.parse_args()
     return opt
 
@@ -64,10 +63,12 @@ if __name__ == "__main__":
     while video_capture.Video_capture.CAMERA_OPEN == 0:
         Video = video_capture.Video_capture(is_save)
 
-    Inf = Inference(**vars(opt))
+    Inference = Inference(**vars(opt))
     
-    # Inf_serial = Interactive_serial()
-    # thread1 = threading.Thread(target=(Inf_serial.send_data))
-    # thread1.start()
+    Inference_serial = Interactive_serial()
+    thread1 = threading.Thread(target=(Inference_serial.send_mineral_data))
+    thread2 = threading.Thread(target=(Inference_serial.send_station_data))
+    thread1.start()
+    thread2.start()
     
-    run(Video,Inf,is_save,mode)
+    run(Video,Inference,is_save,mode)
