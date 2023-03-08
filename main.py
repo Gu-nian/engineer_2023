@@ -3,17 +3,16 @@ import threading
 import cv2
 import numpy as np
 
-import video_capture  
-import mvsdk
-from to_inference import Inference
+from video_function import video_capture, mvsdk
+from inference_function.to_inference import Inference
 from utils.torch_utils import time_sync
-from use_serial import Interactive_serial
+from serial_function.serial_function import Interactive_serial
 
 # 传入模型位置
 def parse_opt():
     parser = argparse.ArgumentParser()
     # 自启动 default 要改成绝对路径
-    parser.add_argument('--weights', nargs='+', type=str, default='./station.pt', help='model path(s)')
+    parser.add_argument('--weights', nargs='+', type=str, default='./inference_models/station.pt', help='model path(s)')
     opt = parser.parse_args()
     return opt
 
@@ -65,10 +64,10 @@ if __name__ == "__main__":
 
     Inference = Inference(**vars(opt))
     
-    Inference_serial = Interactive_serial()
-    thread1 = threading.Thread(target=(Inference_serial.send_mineral_data))
-    thread2 = threading.Thread(target=(Inference_serial.send_station_data))
-    thread1.start()
-    thread2.start()
+    # Inference_serial = Interactive_serial()
+    # thread1 = threading.Thread(target=(Inference_serial.send_mineral_data), daemon = True)
+    # thread2 = threading.Thread(target=(Inference_serial.send_station_data), daemon = True)
+    # thread1.start()
+    # thread2.start()
     
     run(Video,Inference,is_save,mode)

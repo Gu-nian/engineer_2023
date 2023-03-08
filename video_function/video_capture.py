@@ -1,9 +1,11 @@
-import mvsdk
 from pickle import FALSE
-import cv2
 import time
-from utils.torch_utils import time_sync
+
+import cv2
 import numpy as np
+
+from utils.torch_utils import time_sync
+from video_function import mvsdk
 
 class Video_capture:
     COLS = 1280

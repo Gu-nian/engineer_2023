@@ -1,8 +1,8 @@
 import serial
 import time
-
-from mineral_function import Mineral
-from station_function import Station
+         
+from inference_function.mineral_function import Mineral
+from inference_function.station_function import Station
 class Interactive_serial(object):
     def __init__(self):
         self.ser = serial.Serial()

@@ -1,7 +1,7 @@
 class Mineral():
     deviation_x = 0
     direction = 0
-    target_x = 400
+    target_x = 640
 
     def init_serial_data():
         Mineral.deviation_x = 0

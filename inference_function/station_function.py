@@ -1,11 +1,11 @@
 import cv2
 import numpy as np
 
-from share_function import Share
+from inference_function.share_function import Share
 class Station():
     deviation_x = 0
     direction = 2
-    target_x = 400
+    target_x = 640
     pitch_angle = 0
     roll_angle = 0
     def init_serial_data():

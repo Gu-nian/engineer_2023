@@ -5,10 +5,10 @@ import cv2
 import numpy as np
 import torch
 
-import video_capture
-from station_function import Station
-from share_function import Share
-from mineral_function import Mineral
+import video_function.video_capture
+from inference_function.station_function import Station
+from inference_function.share_function import Share
+from inference_function.mineral_function import Mineral
 from models.common import DetectMultiBackend
 from utils.general import check_img_size,non_max_suppression,scale_coords, xyxy2xywh
 from utils.torch_utils import select_device
@@ -155,6 +155,7 @@ class Inference(object):
 
                 if len(stations) > 0 and len(special_rects) > 0 and len(nomal_rects) > 0 :
                     station_x_center, station_y_center, station_top_left, station_top_right, station_bottom_left, station_bottom_right = Station.station_compare(frame, stations)
+                    station_deviation_x  = station_x_center - Station.target_x
 
                     special_rects = Station.include_relationship(img_size, special_rects, station_top_left, station_bottom_right )                    
                     nomal_rects = Station.include_relationship(img_size, nomal_rects, station_top_left, station_bottom_right)
@@ -197,16 +198,18 @@ class Inference(object):
                     try:                        
                         pitch_angle =Station.compute_pitch(distance_level_top, distance_level_borrom, distance_vertical_left, distance_vertical_right, 23)  
                         roll_angle = Station.compute_roll(top_left_point, top_right_point, bottom_left_point, bottom_right_point)                        
-                        roll_angle = Station.roll_angle_compensate(roll_angle)                        
+                        roll_angle = Station.roll_angle_compensate(roll_angle)
                     except:               
                         print("Analysis Angle Error")
                     
-                    if abs(station_x_center - Station.target_x) < 24:
+
+                    if abs(station_deviation_x) < 24:
                         station_deviation_x  = 0
                     elif station_x_center - Station.target_x > 0:
                         station_direction = 2
                     else:
                         station_direction = 1
+
                     Station.set_serial_data(station_deviation_x, station_direction, round(pitch_angle), round(roll_angle))
                     Station.print_serial_data()
     
