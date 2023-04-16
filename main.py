@@ -64,7 +64,9 @@ if __name__ == "__main__":
 
     Inference = Inference(**vars(opt))
     
-    # Inference_serial = Interactive_serial()
+    Inference_serial = Interactive_serial()
+    # Inference_serial.send_test_data()
+    # Inference_serial.receive_data()
     # thread1 = threading.Thread(target=(Inference_serial.send_mineral_data), daemon = True)
     # thread2 = threading.Thread(target=(Inference_serial.send_station_data), daemon = True)
     # thread1.start()
