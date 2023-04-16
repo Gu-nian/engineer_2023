@@ -70,10 +70,7 @@ class Inference(object):
         img = torch.from_numpy(img).to(device)
         img = img.float()
         img /= 255.
-
         
-        Mineral.init_serial_data()
-        Station.init_serial_data()
         contours = Station.find_light(frame)
 
         if len(img.shape) == 3:
@@ -132,6 +129,7 @@ class Inference(object):
                         nomal_rects.append(det)
                         nomal_rects_confs.append(confs[i])
                 
+                # 等个数据接收后处理的东西
                 # mineral
                 if  len(mineral_arr) > 0:
                     if abs(Share.radix_sort(mineral_arr)[0]) < abs(Share.radix_sort(mineral_arr)[-1]):
@@ -140,7 +138,8 @@ class Inference(object):
                         mineral_deviation_x = Share.radix_sort(mineral_arr)[-1]
 
                     if mode == True:
-                        cv2.putText(frame, "real_x = " + str(mineral_deviation_x), (0, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)                    
+                        cv2.putText(frame, "real_x = " + str(mineral_deviation_x), (0, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
+                            
                     
                     if abs(mineral_deviation_x) < 24:
                         mineral_deviation_x  = 0
@@ -149,9 +148,13 @@ class Inference(object):
                     else:
                         mineral_direction = 1
 
+                    if mode == Ture:
+                        Share.draw_data(frame, img_size, direction, deviation_x)
                     Mineral.set_serial_data(mineral_deviation_x, mineral_direction)
                     Mineralprint_serial_data()
                     # Share.draw_data(frame, img_size, mode)
+                else:
+                    Mineral.init_serial_data()
 
                 if len(stations) > 0 and len(special_rects) > 0 and len(nomal_rects) > 0 :
                     station_x_center, station_y_center, station_top_left, station_top_right, station_bottom_left, station_bottom_right = Station.station_compare(frame, stations)
@@ -174,10 +177,12 @@ class Inference(object):
                     result_rects = Station.cv_rects_compare(special_cv_rects, nomal_cv_rects)
                     for i in range (0,len(result_rects)):
                         cv2.rectangle(frame,result_rects[i],(0,0,255),3)
-
+                    
                     special_rect, single = Station.confirm_special_rect(img_size, special_rects, station_top_left, station_top_right, station_bottom_left, station_bottom_right, result_rects)
-                    nomal_rects = Station.two_special_rect_dealwith(special_rects, special_rect, nomal_rects, '2')
-                    nomal_cv_rects = Station.include_cv_relationship(img_size, nomal_rects, result_rects)
+                    if len(special_rects) > 1:
+                        nomal_rects = Station.two_special_rect_dealwith(special_rects, special_rect, nomal_rects, '2')
+                        nomal_cv_rects = Station.include_cv_relationship(img_size, nomal_rects, result_rects)
+                    
 
                     if single == 0:
                         continue
@@ -192,27 +197,27 @@ class Inference(object):
                         distance_vertical_left = Share.compute_distance(top_left_point, bottom_left_point)
                         distance_level_top = Share.compute_distance(top_left_point, top_right_point)                    
                         distance_vertical_right = Share.compute_distance(top_right_point, bottom_right_point)                                                                    
-                    except:
-                        print("Nomal_cv_rects Nums Error")          
-                    
-                    try:                        
+                 
                         pitch_angle =Station.compute_pitch(distance_level_top, distance_level_borrom, distance_vertical_left, distance_vertical_right, 23)  
                         roll_angle = Station.compute_roll(top_left_point, top_right_point, bottom_left_point, bottom_right_point)                        
                         roll_angle = Station.roll_angle_compensate(roll_angle)
-                    except:               
-                        print("Analysis Angle Error")
+
+                        if abs(station_deviation_x) < 24:
+                            station_deviation_x  = 0
+                        elif station_x_center  > 0:
+                            station_direction = 1
+                        else:
+                            station_direction = 0
+
+                        roll_flag = 1 if roll_angle > 0 else 0
+                        Station.set_serial_data(station_direction, round(station_deviation_x), round(pitch_angle), roll_flag, round(abs(roll_angle)))
+                        # Station.print_serial_data() 
+                    except:
+                        Station.init_serial_data()
+                        print("Nomal_cv_rects Nums Error", " or ", "Analysis Angle Error", " or ", "Serial Error")                        
+                else:
+                    Station.init_serial_data()                
                     
-
-                    if abs(station_deviation_x) < 24:
-                        station_deviation_x  = 0
-                    elif station_x_center - Station.target_x > 0:
-                        station_direction = 2
-                    else:
-                        station_direction = 1
-
-                    Station.set_serial_data(station_deviation_x, station_direction, round(pitch_angle), round(roll_angle))
-                    Station.print_serial_data()
-    
             
     
    
