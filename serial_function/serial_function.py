@@ -33,7 +33,7 @@ class Interactive_serial(object):
     # 串口发送移动信息 2停 0左 1右
     def send_mineral_data(self):
         while True:
-            time.sleep(0.0005)
+            time.sleep(0.005)
             try:
                 if Mineral.deviation_x == 0:
                     self.ser.write(('S' + str(2) + str(0) + str(0) + str(0) + 'E').encode("utf-8"))
@@ -50,33 +50,91 @@ class Interactive_serial(object):
                 print('Serial Send Mineral Data Error')
                 Interactive_serial.serial_connection(self)
     
+    # 方向 1， 偏移量 3， pitch角度 2，roll方向 1， roll角度 2
+    # 0 负 1 正
     def send_station_data(self):
         while True:
-            time.sleep(0.0005)
+            time.sleep(0.005)
             try:
                 if Station.deviation_x == 0:
-                    self.ser.write(('S' + str(2) + str(0) + str(0) + str(0) + 'E').encode("utf-8"))
+                    if Station.pitch_angle / 10 >= 1:
+                        if Station.roll_angle / 10 >= 1:
+                            self.ser.write(('S' + str(2) + str(0) + str(0) + str(0) + str(Station.pitch_angle) + str(Station.roll_flag) + str(Station.roll_angle) + 'E').encode("utf-8"))
+                        else:
+                            self.ser.write(('S' + str(2) + str(0) + str(0) + str(0) + str(Station.pitch_angle) + str(Station.roll_flag) + str(0) + str(Station.roll_angle) + 'E').encode("utf-8"))
+                    else:
+                        if Station.roll_angle / 10 >= 1:
+                            self.ser.write(('S' + str(2) + str(0) + str(0) + str(0) + str(0) + str(Station.pitch_angle) + str(Station.roll_flag) + str(Station.roll_angle) + 'E').encode("utf-8"))
+                        else:
+                            self.ser.write(('S' + str(2) + str(0) + str(0) + str(0) + str(0) + str(Station.pitch_angle) + str(Station.roll_flag) + str(0) + str(Station.roll_angle) + 'E').encode("utf-8"))
+                
+                elif Station.deviation_x / 100 >= 1:
+                    if Station.pitch_angle / 10 >= 1:
+                        if Station.roll_angle / 10 >= 1:
+                            self.ser.write(('S' + str(Station.direction) + str(Station.deviation_x) + str(Station.pitch_angle) + str(Station.roll_flag) + str(Station.roll_angle) + 'E').encode("utf-8"))
+                        else:
+                            self.ser.write(('S' + str(Station.direction) + str(Station.deviation_x) + str(Station.pitch_angle) + str(Station.roll_flag) + str(0) + str(Station.roll_angle) + 'E').encode("utf-8"))
+                    else:
+                        if Station.roll_angle / 10 >= 1:
+                            self.ser.write(('S' + str(Station.direction) + str(Station.deviation_x) + str(0) + str(Station.pitch_angle) + str(Station.roll_flag) + str(Station.roll_angle) + 'E').encode("utf-8"))
+                        else:
+                            self.ser.write(('S' + str(Station.direction) + str(Station.deviation_x) + str(0) + str(Station.pitch_angle) + str(Station.roll_flag) + str(0) + str(Station.roll_angle) + 'E').encode("utf-8"))
+                        
+                elif Station.deviation_x / 10 >= 1:
+                    if Station.pitch_angle / 10 >= 1:
+                        if Station.roll_angle / 10 >= 1:
+                            self.ser.write(('S' + str(Station.direction) + str(0) + str(Station.deviation_x) + str(Station.pitch_angle) + str(Station.roll_flag) + str(Station.roll_angle) + 'E').encode("utf-8"))
+                        else:
+                            self.ser.write(('S' + str(Station.direction) + str(0) + str(Station.deviation_x) + str(Station.pitch_angle) + str(Station.roll_flag) + str(0) + str(Station.roll_angle) + 'E').encode("utf-8"))
+                    else:
+                        if Station.roll_angle / 10 >= 1:
+                            self.ser.write(('S' + str(Station.direction) + str(0) + str(Station.deviation_x) + str(0) + str(Station.pitch_angle) + str(Station.roll_flag) + str(Station.roll_angle) + 'E').encode("utf-8"))
+                        else:
+                            self.ser.write(('S' + str(Station.direction) + str(0) + str(Station.deviation_x) + str(0) + str(Station.pitch_angle) + str(Station.roll_flag) + str(0) + str(Station.roll_angle) + 'E').encode("utf-8"))
+
+                elif Station.deviation_x / 1 >= 1:
+                    if Station.pitch_angle / 10 >= 1:
+                        if Station.roll_angle / 10 >= 1:
+                            self.ser.write(('S' + str(Station.direction) + str(0) + str(0) + str(Station.deviation_x) + str(Station.pitch_angle) + str(Station.roll_flag) + str(Station.roll_angle) + 'E').encode("utf-8"))
+                        else:
+                            self.ser.write(('S' + str(Station.direction) + str(0) + str(0) + str(Station.deviation_x) + str(Station.pitch_angle) + str(Station.roll_flag) + str(0) + str(Station.roll_angle) + 'E').encode("utf-8"))
+                    else:
+                        if Station.roll_angle / 10 >= 1:
+                            self.ser.write(('S' + str(Station.direction) + str(0) + str(0) + str(Station.deviation_x) + str(0) + str(Station.pitch_angle) + str(Station.roll_flag) + str(Station.roll_angle) + 'E').encode("utf-8"))
+                        else:
+                            self.ser.write(('S' + str(Station.direction) + str(0) + str(0) + str(Station.deviation_x) + str(0) + str(Station.pitch_angle) + str(Station.roll_flag) + str(0) + str(Station.roll_angle) + 'E').encode("utf-8"))
+                            
+                else:
+                    self.ser.write(('S' + str(2) + str(0) + str(0) + str(0) + str(Station.pitch_angle) + str(Station.roll_flag) + str(Station.roll_angle) + 'E').encode("utf-8"))
+                print("deviation_x: ", Station.deviation_x)
+                print("direction: ", Station.direction)
+                print("pitch_angle: ", Station.pitch_angle)
+                print("roll_flag: ", Station.roll_flag)
+                print("roll_angle: ", Station.roll_angle)
             except:
                 self.ser.close()
                 print('Serial Send Station Data Error')
                 Interactive_serial.serial_connection(self)
+    
+    def send_test_data(self):
+        while True:
+            a = 0
+            for i in range(1000):    
+                time.sleep(0.005)
+                self.ser.write(('S' + str(a) + 'E').encode("utf-8"))
+                print(a)
+                a += 10
+                
     # 串口接收数据
-    # def receive_data(self):
-    #     while True:
-    #         time.sleep(0.05)
-    #         try:
-    #             data = self.ser.read(3)
-    #             if data == b'\x03\x03\x03' or data == b'\x01\x01\x01':
-    #                 Mineral.TARGET_X = 480  #空接 不抬升500 抬升480 
-    #                 Mineral.FLAG = 1
-    #                 # print(data)
-    #             if data == b'\x02\x02\x02':
-    #                 Mineral.TARGET_X = 415  #资源岛
-    #                 Mineral.FLAG = 0
-    #                 # print(data)
-    #             print(data)
-    #         except:                
-    #             self.ser.close()
-    #             print('Serial Send Data Error')
-    #             Mineral.serial_connection(self)
+    def receive_data(self):
+        while True:
+            time.sleep(0.05)
+            try:
+                data = self.ser.read(3)
+                data1 = self.ser.read_all()
+                print("data: ", data)
+                print("all_data: ", data1)
+            except:                
+                self.ser.close()
+                print('Serial Send Data Error')
                 
