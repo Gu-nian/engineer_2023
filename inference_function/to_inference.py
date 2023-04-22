@@ -98,7 +98,7 @@ class Inference(object):
                     aim = ('%g ' * len(line)).rstrip() % line 
                     aim = aim.split(' ')
                     # 筛选出自信度大于70%
-                    if float(conf) > 0.45:
+                    if float(conf) > 0.70:
                         aims.append(aim)
                         confs.append(float(conf))
 
@@ -151,7 +151,7 @@ class Inference(object):
                     if mode == Ture:
                         Share.draw_data(frame, img_size, direction, deviation_x)
                     Mineral.set_serial_data(mineral_deviation_x, mineral_direction)
-                    Mineralprint_serial_data()
+                    Mineral.print_serial_data()
                     # Share.draw_data(frame, img_size, mode)
                 else:
                     Mineral.init_serial_data()
@@ -198,10 +198,12 @@ class Inference(object):
                         distance_level_top = Share.compute_distance(top_left_point, top_right_point)                    
                         distance_vertical_right = Share.compute_distance(top_right_point, bottom_right_point)                                                                    
                  
-                        pitch_angle =Station.compute_pitch(distance_level_top, distance_level_borrom, distance_vertical_left, distance_vertical_right, 23)  
+                        pitch_angle = Station.compute_pitch(distance_level_top, distance_level_borrom, distance_vertical_left, distance_vertical_right, 23)  
+                        pitch_angle = pitch_angle if pitch_angle > 0 else 0
                         roll_angle = Station.compute_roll(top_left_point, top_right_point, bottom_left_point, bottom_right_point)                        
                         roll_angle = Station.roll_angle_compensate(roll_angle)
 
+                        station_direction = 2 
                         if abs(station_deviation_x) < 24:
                             station_deviation_x  = 0
                         elif station_x_center  > 0:
@@ -211,7 +213,6 @@ class Inference(object):
 
                         roll_flag = 1 if roll_angle > 0 else 0
                         Station.set_serial_data(station_direction, round(station_deviation_x), round(pitch_angle), roll_flag, round(abs(roll_angle)))
-                        # Station.print_serial_data() 
                     except:
                         Station.init_serial_data()
                         print("Nomal_cv_rects Nums Error", " or ", "Analysis Angle Error", " or ", "Serial Error")                        
