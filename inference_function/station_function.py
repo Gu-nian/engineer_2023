@@ -95,15 +95,9 @@ class Station():
 
     # cv_rects间去重
     def cv_rects_compare(rects1, rects2):
-        for _, rect1 in enumerate(rects1):
-            rect1_top_left = (rect1[0], rect1[1])
-            rect1_bottom_right = [(rect1[0] + rect1[2]), (rect1[1] + rect1[3])]
-            count = 0
-            for rect2_index, rect2 in enumerate(rects2):                
-                rect2_center = [rect2[0] + rect2[2] / 2 , rect2[1] + rect2[3] /2]                
-                if  rect2_center[0] < rect1_top_left[0] and rect2_center[1] < rect1_top_left[1] and rect2_center[0] > rect1_bottom_right[0] and rect2_center[1] > rect1_bottom_right[1]:
-                    del rects2[rect2_index - count]
-                    count += 1
+        for _, rect2 in enumerate(rects2):
+            if rect2 in rects1:
+                rects1.remove((rect2))
         return rects1 + rects2
 
     # special_rect明确确定
@@ -204,11 +198,12 @@ class Station():
         top_right_point = [top_right_cv_rect[0], top_right_cv_rect[1]]
         four_point_distance = Station.distance_compare(nomal_cv_rects, top_right_point)
         top_right_point_distance = Share.compute_distance(top_right_point, (top_right_point[0], 0))
-        print(four_point_distance)
+
         # 右上点最高
         if top_right_point_distance == four_point_distance[0]:
             if len(four_point_distance) == 5:
-                four_point_distance, nomal_cv_rects = edge_correct(four_point_distance, nomal_cv_rects, '1')
+                four_point_distance, nomal_cv_rects = Station.edge_correct(four_point_distance, nomal_cv_rects, '1')
+                print(four_point_distance)
             for i, rect in enumerate(nomal_cv_rects):
                 analysis_distance = Share.compute_distance(rect, (rect[0], 0))
                 if analysis_distance == four_point_distance[1]:                    
@@ -221,7 +216,7 @@ class Station():
         # 第二高   
         if top_right_point_distance == four_point_distance[1]:
             if len(four_point_distance) == 5:
-                four_point_distance, nomal_cv_rects = edge_correct(four_point_distance, nomal_cv_rects, '2')
+                four_point_distance, nomal_cv_rects = Station.edge_correct(four_point_distance, nomal_cv_rects, '2')
             for i, rect in enumerate(nomal_cv_rects):             
                 analysis_distance = Share.compute_distance(rect, (rect[0], 0))
                 if analysis_distance == four_point_distance[0]:
@@ -230,11 +225,12 @@ class Station():
                     bottom_right_rect = rect
                 if analysis_distance == four_point_distance[2]:
                     bottom_left_rect = rect
+            print(four_point_distance)
             top_left_point, bottom_left_point, bottom_right_point = Station.other_compare(top_left_rect, bottom_right_rect, bottom_left_rect, '2')
         # 第三高（防止仰视原因出现的错误   
         if top_right_point_distance == four_point_distance[2]:
             if len(four_point_distance) == 5:
-                four_point_distance, nomal_cv_rects = edge_correct(four_point_distance, nomal_cv_rects, '3')
+                four_point_distance, nomal_cv_rects = Station.edge_correct(four_point_distance, nomal_cv_rects, '3')
             for i, rect in enumerate(nomal_cv_rects):
                 analysis_distance = Share.compute_distance(rect, (rect[0], 0))
                 if analysis_distance == four_point_distance[0]:
@@ -243,7 +239,7 @@ class Station():
                     bottom_right_point = [rect[0] + rect[2], rect[1] + rect[3]]
                 if analysis_distance == four_point_distance[1]:
                     bottom_left_point = [rect[0], rect[1] + rect[3]]
-
+        print(four_point_distance)
         top_right_point = [top_right_cv_rect[0] + top_right_cv_rect[2], top_right_cv_rect[1]]
         # print("top_right_point: ", top_right_point)       
         # print("top_left_point: ", top_left_point)
@@ -252,30 +248,42 @@ class Station():
         return top_right_point, top_left_point, bottom_left_point, bottom_right_point
 
     def edge_correct(four_point_distance, nomal_cv_rects, mode):
-            if(mode == '1'):
-                for i, rect in enumerate(nomal_cv_rects):
-                    analysis_distance = Share.compute_distance(rect, (rect[0], 0))
-                    if analysis_distance == four_point_distance[1]:
-                        thirds = rect
-                        thirds_distance = analysis_distance
-                    if analysis_distance == four_point_distance[2]:
-                        fourth = rect
-                        fourth_distance = analysis_distance
-                    wait_del_rect, wait_del_distance = thirds, thirds_distance if thirds[0] < fourth[0] else fourth, fourth_distance                     
-                    nomal_cv_rects.remove(wait_del_rect)
-                return four_point_distance, nomal_cv_rects
-            else:
-                for i, rect in enumerate(nomal_cv_rects):
-                    analysis_distance = Share.compute_distance(rect, (rect[0], 0))
-                    if analysis_distance == four_point_distance[1]:
-                        thirds = rect
-                        thirds_distance = analysis_distance
-                    if analysis_distance == four_point_distance[2]:
-                        fourth = rect
-                        fourth_distance = analysis_distance
-                    wait_del_rect, wait_del_distance = thirds, thirds_distance if thirds[0] > fourth[0] else fourth, fourth_distance                     
-                    nomal_cv_rects.remove(wait_del_rect)
-                return four_point_distance, nomal_cv_rects
+        thirds = 0
+        fourth = 0
+        if(mode == '1'):                
+            for i, rect in enumerate(nomal_cv_rects):
+                analysis_distance = Share.compute_distance(rect, (rect[0], 0))
+                if analysis_distance == four_point_distance[2]:
+                    thirds = rect
+                    thirds_distance = analysis_distance
+                if analysis_distance == four_point_distance[3]:
+                    fourth = rect
+                    fourth_distance = analysis_distance
+                if thirds and fourth:
+                    if thirds[0] < fourth[0]:
+                        wait_del_rect, wait_del_distance = thirds, thirds_distance
+                    else:
+                        wait_del_rect, wait_del_distance = fourth, fourth_distance                                                         
+            nomal_cv_rects.remove(wait_del_rect)
+            four_point_distance.remove(wait_del_distance)
+            return four_point_distance, nomal_cv_rects
+        else:
+            for i, rect in enumerate(nomal_cv_rects):
+                analysis_distance = Share.compute_distance(rect, (rect[0], 0))
+                if analysis_distance == four_point_distance[2]:
+                    thirds = rect
+                    thirds_distance = analysis_distance
+                if analysis_distance == four_point_distance[3]:
+                    fourth = rect
+                    fourth_distance = analysis_distance
+                if thirds and fourth:
+                        if thirds[0] > fourth[0]:
+                            wait_del_rect, wait_del_distance = thirds, thirds_distance
+                        else:
+                            wait_del_rect, wait_del_distance = fourth, fourth_distance  
+            nomal_cv_rects.remove(wait_del_rect)
+            four_point_distance.remove(wait_del_distance)
+            return four_point_distance, nomal_cv_rects
 
     # 角点纠正
     def other_compare(top_left_rect, bottom_right_rect, bottom_left_rect, position):

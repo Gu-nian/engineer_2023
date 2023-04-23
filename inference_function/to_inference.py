@@ -173,16 +173,20 @@ class Inference(object):
                             rects.append(rect)
 
                     special_cv_rects = Station.include_cv_relationship(img_size, special_rects, rects)
+                    # print("special_cv_rects: ", special_cv_rects)
                     nomal_cv_rects = Station.include_cv_relationship(img_size, nomal_rects, rects)
+                    # print("nomal_cv_rects: ", nomal_cv_rects)
                     result_rects = Station.cv_rects_compare(special_cv_rects, nomal_cv_rects)
+                    # print("result_rects: ", result_rects)
                     for i in range (0,len(result_rects)):
                         cv2.rectangle(frame,result_rects[i],(0,0,255),3)
                     
                     special_rect, single = Station.confirm_special_rect(img_size, special_rects, station_top_left, station_top_right, station_bottom_left, station_bottom_right, result_rects)
                     if len(special_rects) > 1:
                         nomal_rects = Station.two_special_rect_dealwith(special_rects, special_rect, nomal_rects, '2')
+                        # print("nomal_cv_rects1: ",  len(nomal_cv_rects))
                         nomal_cv_rects = Station.include_cv_relationship(img_size, nomal_rects, result_rects)
-                    
+                        # print("nomal_cv_rects2: ",  len(nomal_cv_rects))
 
                     if single == 0:
                         continue
@@ -190,32 +194,32 @@ class Inference(object):
                         top_right_cv_rect = Station.special_rects_gain_cv_rects(img_size, special_rect, special_cv_rects)                        
                         Share.draw_inference(frame, img_size, [special_rect], mode)
                         Share.draw_inference(frame, img_size, nomal_rects, mode)
-                    try:
-                        top_right_point, top_left_point, bottom_left_point, bottom_right_point = Station.analysis_other_point(nomal_cv_rects, top_right_cv_rect)
+                    # try:
+                    top_right_point, top_left_point, bottom_left_point, bottom_right_point = Station.analysis_other_point(nomal_cv_rects, top_right_cv_rect)
 
-                        distance_level_borrom = Share.compute_distance(bottom_left_point, bottom_right_point)                        
-                        distance_vertical_left = Share.compute_distance(top_left_point, bottom_left_point)
-                        distance_level_top = Share.compute_distance(top_left_point, top_right_point)                    
-                        distance_vertical_right = Share.compute_distance(top_right_point, bottom_right_point)                                                                    
-                 
-                        pitch_angle = Station.compute_pitch(distance_level_top, distance_level_borrom, distance_vertical_left, distance_vertical_right, 23)  
-                        pitch_angle = pitch_angle if pitch_angle > 0 else 0
-                        roll_angle = Station.compute_roll(top_left_point, top_right_point, bottom_left_point, bottom_right_point)                        
-                        roll_angle = Station.roll_angle_compensate(roll_angle)
+                    distance_level_borrom = Share.compute_distance(bottom_left_point, bottom_right_point)                        
+                    distance_vertical_left = Share.compute_distance(top_left_point, bottom_left_point)
+                    distance_level_top = Share.compute_distance(top_left_point, top_right_point)                    
+                    distance_vertical_right = Share.compute_distance(top_right_point, bottom_right_point)                                                                    
+                
+                    pitch_angle = Station.compute_pitch(distance_level_top, distance_level_borrom, distance_vertical_left, distance_vertical_right, 23)  
+                    pitch_angle = pitch_angle if pitch_angle > 0 else 0
+                    roll_angle = Station.compute_roll(top_left_point, top_right_point, bottom_left_point, bottom_right_point)                        
+                    roll_angle = Station.roll_angle_compensate(roll_angle)
 
-                        station_direction = 2 
-                        if abs(station_deviation_x) < 24:
-                            station_deviation_x  = 0
-                        elif station_x_center  > 0:
-                            station_direction = 1
-                        else:
-                            station_direction = 0
+                    station_direction = 2 
+                    if abs(station_deviation_x) < 24:
+                        station_deviation_x  = 0
+                    elif station_x_center  > 0:
+                        station_direction = 1
+                    else:
+                        station_direction = 0
 
-                        roll_flag = 1 if roll_angle > 0 else 0
-                        Station.set_serial_data(station_direction, round(station_deviation_x), round(pitch_angle), roll_flag, round(abs(roll_angle)))
-                    except:
-                        Station.init_serial_data()
-                        print("Nomal_cv_rects Nums Error", " or ", "Analysis Angle Error", " or ", "Serial Error")                        
+                    roll_flag = 1 if roll_angle > 0 else 0
+                    Station.set_serial_data(station_direction, round(station_deviation_x), round(pitch_angle), roll_flag, round(abs(roll_angle)))
+                    # except:
+                        # Station.init_serial_data()
+                        # print("Nomal_cv_rects Nums Error", " or ", "Analysis Angle Error", " or ", "Serial Error")                        
                 else:
                     Station.init_serial_data()                
                     
