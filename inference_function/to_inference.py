@@ -114,7 +114,7 @@ class Inference(object):
                     Share.draw_inference(frame, img_size, [det], mode)
                     cv2.putText(frame,str(float(round(confs[i], 2))), top_right, cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
                     # mineral
-                    if tag == 'mineral':                        
+                    if tag == '3':                        
                         mineral_arr.append(int(x_center - Mineral.target_x)) 
                     # station
                     if tag == '1':      
@@ -148,8 +148,8 @@ class Inference(object):
                     else:
                         mineral_direction = 1
 
-                    if mode == Ture:
-                        Share.draw_data(frame, img_size, direction, deviation_x)
+                    if mode == True:
+                        Share.draw_data(frame, img_size, mineral_direction, mineral_deviation_x)
                     Mineral.set_serial_data(mineral_deviation_x, mineral_direction)
                     Mineral.print_serial_data()
                     # Share.draw_data(frame, img_size, mode)
@@ -194,32 +194,33 @@ class Inference(object):
                         top_right_cv_rect = Station.special_rects_gain_cv_rects(img_size, special_rect, special_cv_rects)                        
                         Share.draw_inference(frame, img_size, [special_rect], mode)
                         Share.draw_inference(frame, img_size, nomal_rects, mode)
-                    # try:
-                    top_right_point, top_left_point, bottom_left_point, bottom_right_point = Station.analysis_other_point(nomal_cv_rects, top_right_cv_rect)
 
-                    distance_level_borrom = Share.compute_distance(bottom_left_point, bottom_right_point)                        
-                    distance_vertical_left = Share.compute_distance(top_left_point, bottom_left_point)
-                    distance_level_top = Share.compute_distance(top_left_point, top_right_point)                    
-                    distance_vertical_right = Share.compute_distance(top_right_point, bottom_right_point)                                                                    
-                
-                    pitch_angle = Station.compute_pitch(distance_level_top, distance_level_borrom, distance_vertical_left, distance_vertical_right, 23)  
-                    pitch_angle = pitch_angle if pitch_angle > 0 else 0
-                    roll_angle = Station.compute_roll(top_left_point, top_right_point, bottom_left_point, bottom_right_point)                        
-                    roll_angle = Station.roll_angle_compensate(roll_angle)
+                    try:
+                        top_right_point, top_left_point, bottom_left_point, bottom_right_point = Station.analysis_other_point(nomal_cv_rects, top_right_cv_rect)
 
-                    station_direction = 2 
-                    if abs(station_deviation_x) < 24:
-                        station_deviation_x  = 0
-                    elif station_x_center  > 0:
-                        station_direction = 1
-                    else:
-                        station_direction = 0
+                        distance_level_borrom = Share.compute_distance(bottom_left_point, bottom_right_point)                        
+                        distance_vertical_left = Share.compute_distance(top_left_point, bottom_left_point)
+                        distance_level_top = Share.compute_distance(top_left_point, top_right_point)                    
+                        distance_vertical_right = Share.compute_distance(top_right_point, bottom_right_point)                                                                    
+                    
+                        pitch_angle = Station.compute_pitch(distance_level_top, distance_level_borrom, distance_vertical_left, distance_vertical_right, 23)  
+                        pitch_angle = pitch_angle if pitch_angle > 0 else 0
+                        roll_angle = Station.compute_roll(top_left_point, top_right_point, bottom_left_point, bottom_right_point)                        
+                        roll_angle = Station.roll_angle_compensate(roll_angle)
 
-                    roll_flag = 1 if roll_angle > 0 else 0
-                    Station.set_serial_data(station_direction, round(station_deviation_x), round(pitch_angle), roll_flag, round(abs(roll_angle)))
-                    # except:
-                        # Station.init_serial_data()
-                        # print("Nomal_cv_rects Nums Error", " or ", "Analysis Angle Error", " or ", "Serial Error")                        
+                        station_direction = 2 
+                        if abs(station_deviation_x) < 24:
+                            station_deviation_x  = 0
+                        elif station_deviation_x  > 0:
+                            station_direction = 1
+                        else:
+                            station_direction = 0
+
+                        roll_flag = 1 if roll_angle > 0 else 0
+                        Station.set_serial_data(station_direction, round(abs(station_deviation_x)), round(pitch_angle), roll_flag, round(abs(roll_angle)))
+                    except:
+                        Station.init_serial_data()
+                        print("Nomal_cv_rects Nums Error", " or ", "Analysis Angle Error", " or ", "Serial Error")                        
                 else:
                     Station.init_serial_data()                
                     

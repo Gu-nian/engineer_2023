@@ -33,10 +33,17 @@ class Share():
                 cv2.putText(frame, tag, top_left, cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 255), 4)
     
      # 将数据显示出来
-    # def draw_data(frame, img_size, mode = 1):
-    #     if mode == True:
-    #         cv2.putText(frame, "judge_x = " + str(Inference.DEVIATION_X), (0, 100), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
-    #         cv2.line(frame, (Inference.TARGET_X, 0), (Inference.TARGET_X, int(img_size[0])), (255, 0, 255), 3)
-    #         cv2.putText(frame, 'direction: ' + str(Inference.DIRECTION), (0, 160), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
-    #         cv2.putText(frame, 'high_eight: ' + str(Inference.HIGH_EIGHT), (0, 210), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
-    #         cv2.putText(frame, 'low_eight: ' + str(Inference.LOW_EIGHT), (0, 260), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
+    def draw_station_data(frame, img_size, direction, deviation_x, pitch_angle = 0, roll_flag = 0, roll_angle = 0, mode = 1):
+        if mode == True:
+            cv2.putText(frame, "deviation_x = " + str(deviation_x), (0, 100), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
+            cv2.line(frame, (640, 0), (640, int(img_size[0])), (255, 0, 255), 3)
+            cv2.putText(frame, 'direction: ' + str(direction), (0, 160), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
+            cv2.putText(frame, 'pitch_angle: ' + str(pitch_angle), (0, 210), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
+            cv2.putText(frame, 'roll_flag: ' + str(roll_flag), (0, 260), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
+            cv2.putText(frame, 'roll_angle: ' + str(roll_angle), (0, 310), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
+    
+    def draw_mineral_data(frame, img_size, direction, deviation_x,mode = 1):
+        if mode == True:
+            cv2.putText(frame, "deviation_x = " + str(deviation_x), (0, 100), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
+            cv2.line(frame, (640, 0), (640, int(img_size[0])), (255, 0, 255), 3)
+            cv2.putText(frame, 'direction: ' + str(direction), (0, 160), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)         

@@ -203,7 +203,6 @@ class Station():
         if top_right_point_distance == four_point_distance[0]:
             if len(four_point_distance) == 5:
                 four_point_distance, nomal_cv_rects = Station.edge_correct(four_point_distance, nomal_cv_rects, '1')
-                print(four_point_distance)
             for i, rect in enumerate(nomal_cv_rects):
                 analysis_distance = Share.compute_distance(rect, (rect[0], 0))
                 if analysis_distance == four_point_distance[1]:                    
@@ -225,7 +224,6 @@ class Station():
                     bottom_right_rect = rect
                 if analysis_distance == four_point_distance[2]:
                     bottom_left_rect = rect
-            print(four_point_distance)
             top_left_point, bottom_left_point, bottom_right_point = Station.other_compare(top_left_rect, bottom_right_rect, bottom_left_rect, '2')
         # 第三高（防止仰视原因出现的错误   
         if top_right_point_distance == four_point_distance[2]:
@@ -239,7 +237,6 @@ class Station():
                     bottom_right_point = [rect[0] + rect[2], rect[1] + rect[3]]
                 if analysis_distance == four_point_distance[1]:
                     bottom_left_point = [rect[0], rect[1] + rect[3]]
-        print(four_point_distance)
         top_right_point = [top_right_cv_rect[0] + top_right_cv_rect[2], top_right_cv_rect[1]]
         # print("top_right_point: ", top_right_point)       
         # print("top_left_point: ", top_left_point)

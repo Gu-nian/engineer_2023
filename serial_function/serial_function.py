@@ -111,6 +111,7 @@ class Interactive_serial(object):
                 print("pitch_angle: ", Station.pitch_angle)
                 print("roll_flag: ", Station.roll_flag)
                 print("roll_angle: ", Station.roll_angle)
+                print(" ")
             except:
                 self.ser.close()
                 print('Serial Send Station Data Error')
@@ -121,18 +122,20 @@ class Interactive_serial(object):
             a = 0
             for i in range(1000):    
                 time.sleep(0.005)
-                self.ser.write(('S' + str(a) + 'E').encode("utf-8"))
+                if a == 5:
+                    a = 0
+                self.ser.write(('S' + str(1) + str(0) + str(0) + str(0) + str(a) +  str(a) + str(0) + str(a) + str(a) + 'E').encode("utf-8"))
                 print(a)
-                a += 10
+                a += 1
                 
     # 串口接收数据
     def receive_data(self):
         while True:
             time.sleep(0.05)
             try:
-                data = self.ser.read(3)
-                data1 = self.ser.read_all()
-                print("data: ", data)
+                # data = self.ser.read(3)
+                data1 = self.ser.readline()
+                # print("data: ", data)
                 print("all_data: ", data1)
             except:                
                 self.ser.close()
