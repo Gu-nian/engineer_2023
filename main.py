@@ -10,16 +10,6 @@ from inference_function.share_function import Share
 from utils.torch_utils import time_sync
 from serial_function.serial_function import Interactive_serial
 
-
-# 传入模型位置
-def parse_opt():
-    parser = argparse.ArgumentParser()
-    # 自启动 default 要改成绝对路径
-    parser.add_argument('--weights_station', nargs='+', type=str, default='/home/nuc11-rm2/workspace/helpful/RM2023_model/station.pt', help='model path(s)')
-    parser.add_argument('--weights_mineral', nargs='+', type=str, default='./inference_models/mineral.pt', help='model path(s)')
-    opt = parser.parse_args()
-    return opt
-
 def run(Video, station, mineral, is_save = 0):
     while (cv2.waitKey(1) & 0xFF) != ord('q'):
         try:
@@ -55,15 +45,13 @@ def run(Video, station, mineral, is_save = 0):
 
 if __name__ == "__main__":
 
-    opt = parse_opt()
     is_save = 0
     mode = 1
     while video_capture.Video_capture.CAMERA_OPEN == 0:
         Video = video_capture.Video_capture(is_save)
 
-    station = Inference('/home/nuc11-rm2/workspace/helpful/RM2023_model/station.pt')
-    # station = Inference('./inference_models/station.pt')
-    mineral = Inference('./inference_models/best.pt')
+    station = Inference('./inference_models/station.pt')
+    mineral = Inference('./inference_models/mineral.pt')
     
     # Inference_serial = Interactive_serial()
     # Inference_serial.send_test_data()

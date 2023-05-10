@@ -13,8 +13,6 @@ from models.common import DetectMultiBackend
 from utils.general import check_img_size,non_max_suppression,scale_coords, xyxy2xywh
 from utils.torch_utils import select_device
 
-
-
 class Inference(object):
     # 判断模式
     FLAG = 1
@@ -134,7 +132,7 @@ class Inference(object):
                     # Mineral.print_serial_data()
                 else:
                     Mineral.init_serial_data()
-
+# -------------------------------------------------------------------------------------------------------------------------------------------------------
     # 进行推理 绘制图像 结算出最优 发送数据
     def to_station_inference(self,frame, device, model, imgsz, stride, mode = 1, conf_thres=0.45, iou_thres=0.45):
         img_size = frame.shape
@@ -155,7 +153,6 @@ class Inference(object):
         pred = non_max_suppression(pred, conf_thres, iou_thres, agnostic=False)        
         aims = []
         confs = []
-        mineral_arr = []
         rects = []  
         nomal_rects =  []
         nomal_rects_confs = []
@@ -180,14 +177,14 @@ class Inference(object):
             if len(aims):
                 for i,det in enumerate(aims):
                     tag, x_center, y_center, width, height = det
-                    x_center, width = float(x_center) * img_size[1], float(width) * img_size[1]
-                    y_center, height = float(y_center) * img_size[0], float(height) * img_size[0]
-                    top_left = (int(x_center - width * 0.5), int(y_center - height * 0.5))
-                    top_right = (int(x_center + width * 0.5), int(y_center - height * 0.5))
-                    bottom_left = (int(x_center - width * 0.5), int(y_center + height * 0.5))
-                    bottom_right = (int(x_center + width * 0.5), int(y_center + height * 0.5))
-                    Share.draw_inference(frame, img_size, [det], mode)
-                    cv2.putText(frame,str(float(round(confs[i], 2))), top_right, cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
+                    # x_center, width = float(x_center) * img_size[1], float(width) * img_size[1]
+                    # y_center, height = float(y_center) * img_size[0], float(height) * img_size[0]
+                    # top_left = (int(x_center - width * 0.5), int(y_center - height * 0.5))
+                    # top_right = (int(x_center + width * 0.5), int(y_center - height * 0.5))
+                    # bottom_left = (int(x_center - width * 0.5), int(y_center + height * 0.5))
+                    # bottom_right = (int(x_center + width * 0.5), int(y_center + height * 0.5))
+                    # Share.draw_inference(frame, img_size, [det], mode)
+                    # cv2.putText(frame,str(float(round(confs[i], 2))), top_right, cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
                     # station
                     if tag == '1':      
                         stations.append(det)     
@@ -202,14 +199,15 @@ class Inference(object):
                         nomal_rects_confs.append(confs[i])
                 
                 # 等个数据接收后处理的东西
-                if len(stations) > 0 and len(special_rects) > 0 and len(nomal_rects) > 0 :
+                if len(stations) > 0 and len(special_rects) and len(nomal_rects) > 0 :
                     # print('station')
                     station_x_center, station_y_center, station_top_left, station_top_right, station_bottom_left, station_bottom_right = Station.station_compare(frame, stations)
                     station_deviation_x  = station_x_center - Station.target_x
 
+                    
                     special_rects = Station.include_relationship(img_size, special_rects, station_top_left, station_bottom_right )                    
                     nomal_rects = Station.include_relationship(img_size, nomal_rects, station_top_left, station_bottom_right)
-
+                    
                     # 逐步筛选灯条
                     for i in range(0,len(contours)):
                         rect = cv2.boundingRect(contours[i])
@@ -219,28 +217,24 @@ class Inference(object):
                             light_center[0] < station_bottom_right[0] and light_center[1] < station_bottom_right[1] :
                             rects.append(rect)
                     
+                    special_rects, nomal_rects = Station.tackle_inference_rects(img_size, special_rects, nomal_rects, rects)                    
+                    Share.draw_inference(frame, img_size, special_rects, mode)
+                    Share.draw_inference(frame, img_size, nomal_rects, mode)
                     special_cv_rects = Station.include_cv_relationship(img_size, special_rects, rects)
-                    # print("special_cv_rects: ", special_cv_rects)
                     nomal_cv_rects = Station.include_cv_relationship(img_size, nomal_rects, rects)
-                    # print("nomal_cv_rects: ", nomal_cv_rects)
                     result_rects = Station.cv_rects_compare(special_cv_rects, nomal_cv_rects)
-                    # print("result_rects: ", result_rects)
                     for i in range (0,len(result_rects)):
                         cv2.rectangle(frame,result_rects[i],(0,0,255),3)
                     
-                    special_rect, single = Station.confirm_special_rect(img_size, special_rects, station_top_left, station_top_right, station_bottom_left, station_bottom_right, result_rects)
+                    special_rect, signal = Station.confirm_special_rect(img_size, special_rects, station_top_left, station_top_right, station_bottom_left, station_bottom_right, result_rects)
                     if len(special_rects) > 1:
-                        nomal_rects = Station.two_special_rect_dealwith(special_rects, special_rect, nomal_rects, '2')
-                        # print("nomal_cv_rects1: ",  len(nomal_cv_rects))
+                        nomal_rects = Station.two_special_rect_taskle(special_rects, special_rect, nomal_rects, '2')
                         nomal_cv_rects = Station.include_cv_relationship(img_size, nomal_rects, result_rects)
-                        # print("nomal_cv_rects2: ",  len(nomal_cv_rects))
-
-                    if single == 0:
-                        continue
-                    if single == 2 or single == 1:                        
+                    
+                    if signal == 2:                        
                         top_right_cv_rect = Station.special_rects_gain_cv_rects(img_size, special_rect, special_cv_rects)
-                        Share.draw_inference(frame, img_size, [special_rect], mode)
-                        Share.draw_inference(frame, img_size, nomal_rects, mode)
+                    else:
+                        continue
 
                     try:
                         top_right_point, top_left_point, bottom_left_point, bottom_right_point = Station.analysis_other_point(nomal_cv_rects, top_right_cv_rect)

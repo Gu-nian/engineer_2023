@@ -63,7 +63,7 @@ class Station():
         bottom_left = (int(x_center - width * 0.5), int(y_center + height * 0.5))
         bottom_right = (int(x_center + width * 0.5), int(y_center + height * 0.5))
         return x_center, y_center, top_left, top_right, bottom_left, bottom_right
-
+        
     # 推理rects间包含关系
     def include_relationship(img_size, inference_rects, station_top_left, station_bottom_right):
         new_inference_rects = []
@@ -75,7 +75,27 @@ class Station():
             if center[0] > station_top_left[0] and center[1] > station_top_left[1] and center[0] < station_bottom_right[0] and center[1] < station_bottom_right[1]:
                 new_inference_rects.append(special_rect)
         return new_inference_rects
-        
+
+    def tackle_inference_rects(img_size, special_rects, nomal_rects, cv_rects):
+        for i, nomal_rect in enumerate(nomal_rects):
+            flag = 0
+            tag, x_center, y_center, width, height = nomal_rect
+            x_center, width = float(x_center) * img_size[1], float(width) * img_size[1]
+            y_center, height = float(y_center) * img_size[0], float(height) * img_size[0]
+            top_left = (int(x_center - width * 0.5), int(y_center - height * 0.5))            
+            bottom_right = (int(x_center + width * 0.5), int(y_center + height * 0.5))
+            for j, cv_rect in enumerate(cv_rects):      
+                cv_top_left_x, cv_top_left_y, cv_width, cv_height = cv_rect
+                cv_rect_center = cv_top_left_x + cv_width / 2, cv_top_left_y + cv_height / 2
+                if cv_rect_center[0] > top_left[0] and  cv_rect_center[1] > top_left[1] and cv_rect_center[0] < bottom_right[0] and cv_rect_center[1] < bottom_right[1] :                    
+                    flag += 1
+                    if flag == 3:
+                        new_nomal_rect = ['0', x_center, y_center, width, height]
+                        special_rects.append(new_nomal_rect)
+                        nomal_rects.remove(nomal_rect)
+                        return special_rects, nomal_rects
+        return special_rects, nomal_rects
+
     # 推理rects与cv_rects间包含关系
     def include_cv_relationship(img_size, inference_rects, cv_rects):
         new_cv_rects = []
@@ -87,8 +107,8 @@ class Station():
             bottom_right = (int(x_center + width * 0.5), int(y_center + height * 0.5))
             for j, cv_rect in enumerate(cv_rects):      
                 cv_top_left_x, cv_top_left_y, cv_width, cv_height = cv_rect
-                if cv_width < 10 or cv_height < 10 :
-                    continue
+                # if cv_width < 10 or cv_height < 10 :
+                #     continue
                 cv_rect_center = cv_top_left_x + cv_width / 2, cv_top_left_y + cv_height / 2
                 if cv_rect_center[0] > top_left[0] and  cv_rect_center[1] > top_left[1] and cv_rect_center[0] < bottom_right[0] and cv_rect_center[1] < bottom_right[1] :                    
                     new_cv_rects.append(cv_rect)
@@ -103,7 +123,7 @@ class Station():
 
     # special_rect明确确定
     def pre_confirm_special_rect(img_size, special_rects, result_rects):
-        single = 0
+        signal = 0
         for i, special_rect in enumerate(special_rects):
             count = 0
             tag, x_center, y_center, width, height = special_rect
@@ -117,16 +137,16 @@ class Station():
                 if result_rect_center[0] > top_left[0] and  result_rect_center[1] > top_left[1] and result_rect_center[0] < bottom_right[0] and result_rect_center[1] < bottom_right[1] :                    
                     count += 1
             if count == 3:
-                single = 2
-                return special_rect, single
-        return [], single
+                signal = 2
+                return special_rect, signal
+        return [], signal
 
     # special_rect隐式确定
     def confirm_special_rect(img_size, special_rects, station_top_left, station_top_right, station_bottom_left ,station_bottom_right, result_rects):
-        special_rect, single = Station.pre_confirm_special_rect(img_size, special_rects, result_rects)
-        if single == 2:
-            return special_rect, single
-        single = 0
+        special_rect, signal = Station.pre_confirm_special_rect(img_size, special_rects, result_rects)
+        if signal == 2:
+            return special_rect, signal
+        signal = 0
         temp_rect = []
         result_rect = []
         for i, special_rect in enumerate(special_rects):
@@ -140,27 +160,25 @@ class Station():
 
             distance_top_left = Share.compute_distance(station_top_left, top_left)
             distance_top_right = Share.compute_distance(station_top_right, top_right)
-            distance_bottom_left = Share.compute_distance(station_bottom_left, bottom_left)
-            distance_bottom_right = Share.compute_distance(station_bottom_right, bottom_right)
 
-            distance_list = [distance_top_left, distance_top_right, distance_bottom_left, distance_bottom_right]
+            distance_list = [distance_top_left, distance_top_right]
             distance_list = Share.radix_sort(distance_list)
             if distance_top_right == distance_list[0]:
                 result_rect.append(special_rect)
-                single = 2
+                signal = 2
                 break
             elif distance_top_left == distance_list[0]:
                 temp_rect.append(special_rect)
-                single = 1
+                signal = 1
         if len(result_rect):
-            return result_rect[0], single
+            return result_rect[0], signal
         elif len(temp_rect):
-            return temp_rect[0], single
+            return temp_rect[0], signal
         else:
-            return [], single
+            return [], signal
     
     # 出现上面两个为special_rects, 去掉一个确认为true的另一个加入为nomal_rects
-    def two_special_rect_dealwith(special_rects, special_rect, nomal_rects, nomal_rects_tag = '2'):
+    def two_special_rect_taskle(special_rects, special_rect, nomal_rects, nomal_rects_tag = '2'):
         special_rects.remove(special_rect) 
         if len(nomal_rects) < 3:
             for i, rect in enumerate(special_rects):

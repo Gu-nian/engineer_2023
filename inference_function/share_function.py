@@ -31,7 +31,7 @@ class Share():
                 bottom_right = (int(x_center + width * 0.5), int(y_center + height * 0.5))
                 cv2.rectangle(frame, top_left, bottom_right, (0, 255, 255), 3, 8)
                 cv2.putText(frame, tag, top_left, cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 255), 4)
-    
+
      # 将数据显示出来
     def draw_station_data(frame, img_size, direction, deviation_x, pitch_angle = 0, roll_flag = 0, roll_angle = 0, mode = 1):
         if mode == True:
