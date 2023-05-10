@@ -4,13 +4,12 @@ import time
 import cv2
 import numpy as np
 
-from utils.torch_utils import time_sync
 from video_function import mvsdk
 
 class Video_capture:
     COLS = 1280
     ROWS = 800
-    ExposureTime = 15 * 1000
+    ExposureTime = 12 * 1000
     IS_SAVE_VIDEO = 0
     # 判断相机是否掉线
     CAMERA_OPEN = 0
@@ -96,7 +95,6 @@ class Video_capture:
         while (cv2.waitKey(1) & 0xFF) != ord('q'):
             # 从相机取一帧图片
             try:
-                t2 = time_sync()
                 pRawData, FrameHead = mvsdk.CameraGetImageBuffer(self.hCamera, 200)
                 mvsdk.CameraImageProcess(self.hCamera, pRawData, self.pFrameBuffer, FrameHead)
                 mvsdk.CameraReleaseImageBuffer(self.hCamera, pRawData)
@@ -106,8 +104,7 @@ class Video_capture:
                 frame_data = (mvsdk.c_ubyte * FrameHead.uBytes).from_address(self.pFrameBuffer)
                 frame = np.frombuffer(frame_data, dtype=np.uint8)
                 frame = frame.reshape((FrameHead.iHeight, FrameHead.iWidth, 1 if FrameHead.uiMediaType == mvsdk.CAMERA_MEDIA_TYPE_MONO8 else 3) )
-                t3 = time_sync()
-                print("Inference == " + str(1/(t3 - t2)))
+
                 cv2.imshow("frame",frame)
 
                 if Video_capture.IS_SAVE_VIDEO:
@@ -129,10 +126,68 @@ class Video_capture:
         mvsdk.CameraUnInit(self.hCamera)
         mvsdk.CameraAlignFree(self.pFrameBuffer)
 
+    def empty(a):
+        h_min = cv2.getTrackbarPos("Hue Min","TrackBars")
+        h_max = cv2.getTrackbarPos("Hue Max", "TrackBars")
+        s_min = cv2.getTrackbarPos("Sat Min", "TrackBars")
+        s_max = cv2.getTrackbarPos("Sat Max", "TrackBars")
+        v_min = cv2.getTrackbarPos("Val Min", "TrackBars")
+        v_max = cv2.getTrackbarPos("Val Max", "TrackBars")
+        print(h_min, h_max, s_min, s_max, v_min, v_max)
+        return h_min, h_max, s_min, s_max, v_min, v_max
 
+    def only_capture_hsv(self):
+        cv2.namedWindow("TrackBars")
+        cv2.resizeWindow("TrackBars",640,240)
+        cv2.createTrackbar("Hue Min","TrackBars",0,179,Video_capture.empty)
+        cv2.createTrackbar("Hue Max","TrackBars",19,179,Video_capture.empty)
+        cv2.createTrackbar("Sat Min","TrackBars",110,255,Video_capture.empty)
+        cv2.createTrackbar("Sat Max","TrackBars",240,255,Video_capture.empty)
+        cv2.createTrackbar("Val Min","TrackBars",153,255,Video_capture.empty)
+        cv2.createTrackbar("Val Max","TrackBars",255,255,Video_capture.empty)
+        while (cv2.waitKey(1) & 0xFF) != ord('q'):
+            # 从相机取一帧图片
+            try:
+                pRawData, FrameHead = mvsdk.CameraGetImageBuffer(self.hCamera, 200)
+                mvsdk.CameraImageProcess(self.hCamera, pRawData, self.pFrameBuffer, FrameHead)
+                mvsdk.CameraReleaseImageBuffer(self.hCamera, pRawData)
+                
+                # 此时图片已经存储在pFrameBuffer中，对于彩色相机pFrameBuffer=RGB数据，黑白相机pFrameBuffer=8位灰度数据
+                # 把pFrameBuffer转换成opencv的图像格式以进行后续算法处理
+                frame_data = (mvsdk.c_ubyte * FrameHead.uBytes).from_address(self.pFrameBuffer)
+                frame = np.frombuffer(frame_data, dtype=np.uint8)
+                frame = frame.reshape((FrameHead.iHeight, FrameHead.iWidth, 1 if FrameHead.uiMediaType == mvsdk.CAMERA_MEDIA_TYPE_MONO8 else 3) )
+                imgHSV = cv2.cvtColor(frame,cv2.COLOR_BGR2HSV)
+                h_min,h_max,s_min,s_max,v_min,v_max = Video_capture.empty(0)
+                lower = np.array([h_min,s_min,v_min])
+                upper = np.array([h_max,s_max,v_max])
+                mask = cv2.inRange(imgHSV,lower,upper)
+                imgResult = cv2.bitwise_and(frame,frame,mask=mask)
+                cv2.imshow("Mask", mask)
+                cv2.imshow("Result", imgResult)
+                cv2.imshow("frame",frame)
+
+                if Video_capture.IS_SAVE_VIDEO:
+                    try:
+                        self.out.write(frame)
+                    except:
+                        print("Write Frame Error")
+                
+            except mvsdk.CameraException as e:
+                if e.error_code != mvsdk.CAMERA_STATUS_TIME_OUT:
+                    print("CameraGetImageBuffer failed({}): {}".format(e.error_code, e.message) )  
+
+        if Video_capture.IS_SAVE_VIDEO:
+            try:
+                self.out.release()
+            except:
+                print("Release Frame Error")
+
+        mvsdk.CameraUnInit(self.hCamera)
+        mvsdk.CameraAlignFree(self.pFrameBuffer)
 
 if __name__ == "__main__" :
 
     video = Video_capture(0)
-    video.only_capture()
+    video.only_capture_hsv()
 

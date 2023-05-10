@@ -2,11 +2,12 @@ import cv2
 import numpy as np
 
 from inference_function.share_function import Share
+from video_function.video_capture import Video_capture
 class Station():
     
     deviation_x = 0
     direction = 2
-    target_x = 640
+    target_x = Video_capture.COLS / 2
     pitch_angle = 0
     roll_flag = 0
     roll_angle = 0
@@ -29,15 +30,15 @@ class Station():
         print("deviation_x: ", Station.deviation_x)
         print("direction: ", Station.direction)
         print("pitch_angle: ", Station.pitch_angle)
-        print("roll_flag: ", roll_flag)
+        print("roll_flag: ", Station.roll_flag)
         print("roll_angle: ", Station.roll_angle)
         print()
 
     # 传统视觉找灯条
     def find_light(frame):
         tohsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        toinRange = cv2.inRange(tohsv, (0, 0, 214), (109, 255, 255))
-        # cv2.imshow('inrange', toinRange)
+        toinRange = cv2.inRange(tohsv, (0, 0, 234), (179, 255, 255))
+        cv2.imshow('inrange', toinRange)
         contours, _ = cv2.findContours(toinRange, 0, cv2.CHAIN_APPROX_SIMPLE)  
         return contours
 

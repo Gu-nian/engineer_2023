@@ -18,7 +18,6 @@ from utils.torch_utils import select_device
 class Inference(object):
     # 判断模式
     FLAG = 1
-
     def __init__(self,weights):
         # 加载模型
         self.device = select_device('cpu')
@@ -26,6 +25,10 @@ class Inference(object):
         self.stride = self.model.stride 
         self.imgsz = check_img_size((320,320),s=self.stride)
         self.model.model.float()
+
+    def load_frame(self,frame):
+        frame = frame
+
     
     def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleFill=False, scaleup=True, stride=32):
         # Resize and pad image while meeting stride-multiple constraints
@@ -60,8 +63,80 @@ class Inference(object):
         im = cv2.copyMakeBorder(im, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)  # add border
         return im, ratio, (dw, dh)
 
+    def to_mineral_inference(self,frame, device, model, imgsz, stride, mode = 1, conf_thres=0.45, iou_thres=0.45):
+        img_size = frame.shape
+        img0 = frame 
+        img = Inference.letterbox(img0,imgsz,stride=stride)[0]
+        img = img.transpose((2,0,1))[::-1]
+        img = np.ascontiguousarray(img)
+        img = torch.from_numpy(img).to(device)
+        img = img.float()
+        img /= 255.
+        
+        if len(img.shape) == 3:
+            img = img[None]
+
+        pred = model(img)
+        pred = non_max_suppression(pred, conf_thres, iou_thres, agnostic=False)        
+        aims = []
+        confs = []
+        mineral_arr = []
+        for i ,det in enumerate(pred): 
+            gn = torch.tensor(img0.shape)[[1,0,1,0]]
+            if len(det):
+                det[:,:4] = scale_coords(img.shape[2:], det[:, :4],img0.shape).round()
+                for *xyxy, conf, cls in reversed(det):
+                    xywh = (xyxy2xywh(torch.tensor(xyxy).view(1,4)) / gn).view(-1).tolist()
+                    line = (cls, *xywh)
+                    aim = ('%g ' * len(line)).rstrip() % line 
+                    aim = aim.split(' ')
+                    # 筛选出自信度大于70%
+                    if float(conf) > 0.50:
+                        aims.append(aim)
+                        confs.append(float(conf))
+
+            if len(aims):
+                for i,det in enumerate(aims):
+                    tag, x_center, y_center, width, height = det
+                    x_center, width = float(x_center) * img_size[1], float(width) * img_size[1]
+                    y_center, height = float(y_center) * img_size[0], float(height) * img_size[0]
+                    top_left = (int(x_center - width * 0.5), int(y_center - height * 0.5))
+                    top_right = (int(x_center + width * 0.5), int(y_center - height * 0.5))
+                    bottom_left = (int(x_center - width * 0.5), int(y_center + height * 0.5))
+                    bottom_right = (int(x_center + width * 0.5), int(y_center + height * 0.5))
+                    Share.draw_inference(frame, img_size, [det], mode)
+                    cv2.putText(frame,str(float(round(confs[i], 2))), top_right, cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
+
+                    # mineral
+                    if tag == '0':                        
+                        mineral_arr.append(int(x_center - Mineral.target_x)) 
+                if  len(mineral_arr) > 0:
+                    # print('mineral')
+                    if abs(Share.radix_sort(mineral_arr)[0]) < abs(Share.radix_sort(mineral_arr)[-1]):
+                        mineral_deviation_x = Share.radix_sort(mineral_arr)[0]
+                    else:
+                        mineral_deviation_x = Share.radix_sort(mineral_arr)[-1]
+
+                    if mode == True:
+                        cv2.putText(frame, "real_x = " + str(mineral_deviation_x), (0, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
+
+                    mineral_direction = 2       
+                    if abs(mineral_deviation_x) < 24:
+                        mineral_deviation_x  = 0
+                    elif mineral_deviation_x > 0:
+                        mineral_direction = 0
+                    else:
+                        mineral_direction = 1
+
+                    if mode == True:
+                        Share.draw_mineral_data(frame, img_size, mineral_direction, mineral_deviation_x)
+                    Mineral.set_serial_data(mineral_deviation_x, mineral_direction)
+                    # Mineral.print_serial_data()
+                else:
+                    Mineral.init_serial_data()
+
     # 进行推理 绘制图像 结算出最优 发送数据
-    def to_inference(self, frame, device, model, imgsz, stride, mode = 1, conf_thres=0.45, iou_thres=0.45):
+    def to_station_inference(self,frame, device, model, imgsz, stride, mode = 1, conf_thres=0.45, iou_thres=0.45):
         img_size = frame.shape
         img0 = frame 
         img = Inference.letterbox(img0,imgsz,stride=stride)[0]
@@ -113,9 +188,6 @@ class Inference(object):
                     bottom_right = (int(x_center + width * 0.5), int(y_center + height * 0.5))
                     Share.draw_inference(frame, img_size, [det], mode)
                     cv2.putText(frame,str(float(round(confs[i], 2))), top_right, cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
-                    # mineral
-                    if tag == '3':                        
-                        mineral_arr.append(int(x_center - Mineral.target_x)) 
                     # station
                     if tag == '1':      
                         stations.append(det)     
@@ -130,33 +202,8 @@ class Inference(object):
                         nomal_rects_confs.append(confs[i])
                 
                 # 等个数据接收后处理的东西
-                # mineral
-                if  len(mineral_arr) > 0:
-                    if abs(Share.radix_sort(mineral_arr)[0]) < abs(Share.radix_sort(mineral_arr)[-1]):
-                        mineral_deviation_x = Share.radix_sort(mineral_arr)[0]
-                    else:
-                        mineral_deviation_x = Share.radix_sort(mineral_arr)[-1]
-
-                    if mode == True:
-                        cv2.putText(frame, "real_x = " + str(mineral_deviation_x), (0, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
-                            
-                    
-                    if abs(mineral_deviation_x) < 24:
-                        mineral_deviation_x  = 0
-                    elif mineral_deviation_x > 0:
-                        mineral_direction = 2
-                    else:
-                        mineral_direction = 1
-
-                    if mode == True:
-                        Share.draw_data(frame, img_size, mineral_direction, mineral_deviation_x)
-                    Mineral.set_serial_data(mineral_deviation_x, mineral_direction)
-                    Mineral.print_serial_data()
-                    # Share.draw_data(frame, img_size, mode)
-                else:
-                    Mineral.init_serial_data()
-
                 if len(stations) > 0 and len(special_rects) > 0 and len(nomal_rects) > 0 :
+                    # print('station')
                     station_x_center, station_y_center, station_top_left, station_top_right, station_bottom_left, station_bottom_right = Station.station_compare(frame, stations)
                     station_deviation_x  = station_x_center - Station.target_x
 
@@ -171,7 +218,7 @@ class Inference(object):
                         if light_center[0] > station_top_left[0] and  light_center[1] > station_top_left[1] and \
                             light_center[0] < station_bottom_right[0] and light_center[1] < station_bottom_right[1] :
                             rects.append(rect)
-
+                    
                     special_cv_rects = Station.include_cv_relationship(img_size, special_rects, rects)
                     # print("special_cv_rects: ", special_cv_rects)
                     nomal_cv_rects = Station.include_cv_relationship(img_size, nomal_rects, rects)
@@ -190,8 +237,8 @@ class Inference(object):
 
                     if single == 0:
                         continue
-                    if single == 2:                        
-                        top_right_cv_rect = Station.special_rects_gain_cv_rects(img_size, special_rect, special_cv_rects)                        
+                    if single == 2 or single == 1:                        
+                        top_right_cv_rect = Station.special_rects_gain_cv_rects(img_size, special_rect, special_cv_rects)
                         Share.draw_inference(frame, img_size, [special_rect], mode)
                         Share.draw_inference(frame, img_size, nomal_rects, mode)
 
