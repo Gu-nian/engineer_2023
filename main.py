@@ -19,8 +19,10 @@ def run(Video, station, mineral, is_save = 0):
             frame_data = (mvsdk.c_ubyte * FrameHead.uBytes).from_address(Video.pFrameBuffer)
             frame = np.frombuffer(frame_data, dtype=np.uint8)
             frame = frame.reshape((FrameHead.iHeight, FrameHead.iWidth, 1 if FrameHead.uiMediaType == mvsdk.CAMERA_MEDIA_TYPE_MONO8 else 3) )
-            station.to_station_inference(frame, station.device, station.model, station.imgsz, station.stride, mode=mode)
-            # mineral.to_mineral_inference(frame, mineral.device, mineral.model, mineral.imgsz, mineral.stride, mode=mode)
+            if Interactive_serial.which_mode == 1 or Interactive_serial.which_mode == 0:                
+                mineral.to_mineral_inference(frame, mineral.device, mineral.model, mineral.imgsz, mineral.stride, mode=mode)
+            else:
+                station.to_station_inference(frame, station.device, station.model, station.imgsz, station.stride, mode=mode)
             
 
             if Video.IS_SAVE_VIDEO:
@@ -53,12 +55,12 @@ if __name__ == "__main__":
     station = Inference('./inference_models/station.pt')
     mineral = Inference('./inference_models/mineral.pt')
     
-    # Inference_serial = Interactive_serial()
-    # Inference_serial.send_test_data()
-    # Inference_serial.receive_data()
-    # thread1 = threading.Thread(target=(Inference_serial.send_mineral_data), daemon = True)
-    # thread2 = threading.Thread(target=(Inference_serial.send_station_data), daemon = True)
-    # thread1.start()
-    # thread2.start()
+    Inference_serial = Interactive_serial()
+    receive_data = threading.Thread(target=(Inference_serial.receive_data), daemon = True)
+    mineral_data = threading.Thread(target=(Inference_serial.send_mineral_data), daemon = True)
+    station_data = threading.Thread(target=(Inference_serial.send_station_data), daemon = True)
+    receive_data.start()
+    mineral_data.start()
+    station_data.start()
 
     run(Video, station, mineral, is_save)
