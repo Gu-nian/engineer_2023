@@ -80,6 +80,7 @@ class Station():
         for i, nomal_rect in enumerate(nomal_rects):
             flag = 0
             tag, x_center, y_center, width, height = nomal_rect
+            wait_rect = nomal_rect
             x_center, width = float(x_center) * img_size[1], float(width) * img_size[1]
             y_center, height = float(y_center) * img_size[0], float(height) * img_size[0]
             top_left = (int(x_center - width * 0.5), int(y_center - height * 0.5))            
@@ -90,7 +91,8 @@ class Station():
                 if cv_rect_center[0] > top_left[0] and  cv_rect_center[1] > top_left[1] and cv_rect_center[0] < bottom_right[0] and cv_rect_center[1] < bottom_right[1] :                    
                     flag += 1
                     if flag == 3:
-                        new_nomal_rect = ['0', x_center, y_center, width, height]
+                        wait_rect[0] = '0'
+                        new_nomal_rect = wait_rect
                         special_rects.append(new_nomal_rect)
                         nomal_rects.remove(nomal_rect)
                         return special_rects, nomal_rects
@@ -179,13 +181,15 @@ class Station():
     
     # 出现上面两个为special_rects, 去掉一个确认为true的另一个加入为nomal_rects
     def two_special_rect_taskle(special_rects, special_rect, nomal_rects, nomal_rects_tag = '2'):
-        special_rects.remove(special_rect) 
+        new_special_rects = [special_rect]
+        if special_rect in special_rects:
+            special_rects.remove(special_rect) 
         if len(nomal_rects) < 3:
             for i, rect in enumerate(special_rects):
                 tag, x_center, y_center, width, height = rect
                 rect = [nomal_rects_tag, x_center, y_center, width, height]
                 nomal_rects.append(rect)
-        return nomal_rects
+        return new_special_rects, nomal_rects
 
     # 获取special_rects中的cv_rects
     def special_rects_gain_cv_rects(img_size, special_rect, cv_rects):

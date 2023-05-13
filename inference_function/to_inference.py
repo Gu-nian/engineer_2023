@@ -9,6 +9,7 @@ import video_function.video_capture
 from inference_function.station_function import Station
 from inference_function.share_function import Share
 from inference_function.mineral_function import Mineral
+from video_function.video_capture import Video_capture
 from models.common import DetectMultiBackend
 from utils.general import check_img_size,non_max_suppression,scale_coords, xyxy2xywh
 from utils.torch_utils import select_device
@@ -89,7 +90,7 @@ class Inference(object):
                     aim = ('%g ' * len(line)).rstrip() % line 
                     aim = aim.split(' ')
                     # 筛选出自信度大于70%
-                    if float(conf) > 0.50:
+                    if float(conf) > 0.8:
                         aims.append(aim)
                         confs.append(float(conf))
 
@@ -106,10 +107,9 @@ class Inference(object):
                     cv2.putText(frame,str(float(round(confs[i], 2))), top_right, cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
 
                     # mineral
-                    if tag == '0':                        
+                    if tag == '0' :
                         mineral_arr.append(int(x_center - Mineral.target_x)) 
                 if  len(mineral_arr) > 0:
-                    # print('mineral')
                     if abs(Share.radix_sort(mineral_arr)[0]) < abs(Share.radix_sort(mineral_arr)[-1]):
                         mineral_deviation_x = Share.radix_sort(mineral_arr)[0]
                     else:
@@ -119,16 +119,16 @@ class Inference(object):
                         cv2.putText(frame, "real_x = " + str(mineral_deviation_x), (0, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
 
                     mineral_direction = 2       
-                    if abs(mineral_deviation_x) < 24:
+                    if abs(mineral_deviation_x) < 10:
                         mineral_deviation_x  = 0
-                    elif mineral_deviation_x > 0:
+                    elif mineral_deviation_x < 0:
                         mineral_direction = 0
                     else:
                         mineral_direction = 1
 
                     if mode == True:
                         Share.draw_mineral_data(frame, img_size, mineral_direction, mineral_deviation_x)
-                    Mineral.set_serial_data(mineral_deviation_x, mineral_direction)
+                    Mineral.set_serial_data(abs(mineral_deviation_x), mineral_direction)
                     # Mineral.print_serial_data()
                 else:
                     Mineral.init_serial_data()
@@ -185,6 +185,7 @@ class Inference(object):
                     # bottom_right = (int(x_center + width * 0.5), int(y_center + height * 0.5))
                     # Share.draw_inference(frame, img_size, [det], mode)
                     # cv2.putText(frame,str(float(round(confs[i], 2))), top_right, cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
+
                     # station
                     if tag == '1':      
                         stations.append(det)     
@@ -199,8 +200,7 @@ class Inference(object):
                         nomal_rects_confs.append(confs[i])
                 
                 # 等个数据接收后处理的东西
-                if len(stations) > 0 and len(special_rects) and len(nomal_rects) > 0 :
-                    # print('station')
+                if len(stations) > 0  and len(nomal_rects) > 0 :
                     station_x_center, station_y_center, station_top_left, station_top_right, station_bottom_left, station_bottom_right = Station.station_compare(frame, stations)
                     station_deviation_x  = station_x_center - Station.target_x
 
@@ -217,26 +217,29 @@ class Inference(object):
                             light_center[0] < station_bottom_right[0] and light_center[1] < station_bottom_right[1] :
                             rects.append(rect)
                     
-                    special_rects, nomal_rects = Station.tackle_inference_rects(img_size, special_rects, nomal_rects, rects)                    
-                    Share.draw_inference(frame, img_size, special_rects, mode)
-                    Share.draw_inference(frame, img_size, nomal_rects, mode)
+                    special_rects, nomal_rects = Station.tackle_inference_rects(img_size, special_rects, nomal_rects, rects) 
                     special_cv_rects = Station.include_cv_relationship(img_size, special_rects, rects)
                     nomal_cv_rects = Station.include_cv_relationship(img_size, nomal_rects, rects)
                     result_rects = Station.cv_rects_compare(special_cv_rects, nomal_cv_rects)
-                    for i in range (0,len(result_rects)):
-                        cv2.rectangle(frame,result_rects[i],(0,0,255),3)
+                    # for i in range (0,len(result_rects)):
+                    #     cv2.rectangle(frame,result_rects[i],(0,0,255),3)
                     
-                    special_rect, signal = Station.confirm_special_rect(img_size, special_rects, station_top_left, station_top_right, station_bottom_left, station_bottom_right, result_rects)
+                    # special_rect, signal = Station.confirm_special_rect(img_size, special_rects, station_top_left, station_top_right, station_bottom_left, station_bottom_right, result_rects)
+                    special_rect, signal = Station.pre_confirm_special_rect(img_size, special_rects, result_rects)
+                    
                     if len(special_rects) > 1:
-                        nomal_rects = Station.two_special_rect_taskle(special_rects, special_rect, nomal_rects, '2')
+                        special_rects, nomal_rects = Station.two_special_rect_taskle(special_rects, special_rect, nomal_rects, '2')
                         nomal_cv_rects = Station.include_cv_relationship(img_size, nomal_rects, result_rects)
                     
                     if signal == 2:                        
                         top_right_cv_rect = Station.special_rects_gain_cv_rects(img_size, special_rect, special_cv_rects)
                     else:
                         continue
-
+                    
+                   
                     try:
+                        Share.draw_inference(frame, img_size, [special_rect], mode, (255, 0, 255))
+                        Share.draw_inference(frame, img_size, nomal_rects, mode)
                         top_right_point, top_left_point, bottom_left_point, bottom_right_point = Station.analysis_other_point(nomal_cv_rects, top_right_cv_rect)
 
                         distance_level_borrom = Share.compute_distance(bottom_left_point, bottom_right_point)                        
@@ -250,7 +253,7 @@ class Inference(object):
                         roll_angle = Station.roll_angle_compensate(roll_angle)
 
                         station_direction = 2 
-                        if abs(station_deviation_x) < 24:
+                        if abs(station_deviation_x) < 10:
                             station_deviation_x  = 0
                         elif station_deviation_x  > 0:
                             station_direction = 1
@@ -259,6 +262,7 @@ class Inference(object):
 
                         roll_flag = 1 if roll_angle > 0 else 0
                         Station.set_serial_data(station_direction, round(abs(station_deviation_x)), round(pitch_angle), roll_flag, round(abs(roll_angle)))
+                        # Station.print_serial_data()
                     except:
                         Station.init_serial_data()
                         print("Nomal_cv_rects Nums Error", " or ", "Analysis Angle Error", " or ", "Serial Error")                        

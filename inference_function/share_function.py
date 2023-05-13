@@ -19,7 +19,7 @@ class Share():
         return int(distance)
 
     # 绘制推理框
-    def draw_inference(frame, img_size, inference_rects, mode = 1):
+    def draw_inference(frame, img_size, inference_rects, mode = 1, color = (0, 255, 255)):
         if mode == True:
             for i,inference_rect in enumerate(inference_rects):
                 tag, x_center, y_center, width, height = inference_rect
@@ -29,7 +29,7 @@ class Share():
                 top_right = (int(x_center + width * 0.5), int(y_center - height * 0.5))
                 bottom_left = (int(x_center - width * 0.5), int(y_center + height * 0.5))
                 bottom_right = (int(x_center + width * 0.5), int(y_center + height * 0.5))
-                cv2.rectangle(frame, top_left, bottom_right, (0, 255, 255), 3, 8)
+                cv2.rectangle(frame, top_left, bottom_right, color, 3, 8)
                 cv2.putText(frame, tag, top_left, cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 255), 4)
 
      # 将数据显示出来

@@ -1,7 +1,8 @@
+from video_function.video_capture import Video_capture
 class Mineral():
     deviation_x = 0
     direction = 0
-    target_x = 640
+    target_x = Video_capture.COLS / 2
 
     def init_serial_data():
         Mineral.deviation_x = 0

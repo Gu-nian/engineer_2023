@@ -40,13 +40,16 @@ class Interactive_serial(object):
                     if Mineral.deviation_x == 0:
                         self.ser.write(('S' + str(2) + str(0) + str(0) + str(0) + 'E').encode("utf-8"))
                     elif Mineral.deviation_x / 100 >= 1:
-                        self.ser.write(('S' + str(Mineral.direction) + str(Mineral.deviation_x) + 'E').encode("uft-8"))
+                        self.ser.write(('S' + str(Mineral.direction) + str(Mineral.deviation_x) + 'E').encode("utf-8"))
                     elif Mineral.deviation_x / 10 >= 1:
-                        self.ser.write(('S' + str(Mineral.direction) + str(0) + str(Mineral.deviation_x) + 'E').encode("uft-8"))
+                        self.ser.write(('S' + str(Mineral.direction) + str(0) + str(Mineral.deviation_x) + 'E').encode("utf-8"))
                     elif Mineral.deviation_x / 1 >= 1:
-                        self.ser.write(('S' + str(Mineral.direction) + str(0) + str(0) + str(Mineral.deviation_x) + 'E').encode("uft-8"))
+                        self.ser.write(('S' + str(Mineral.direction) + str(0) + str(0) + str(Mineral.deviation_x) + 'E').encode("utf-8"))
                     else:
                         self.ser.write(('S' + str(2) + str(0) + str(0) + str(0) + 'E').encode("utf-8"))
+                    print("deviation_x: ", Mineral.deviation_x)
+                    print("direction: ", Mineral.direction)
+                    print(" ")
                 except:
                     self.ser.close()
                     print('Serial Send Mineral Data Error')
@@ -109,6 +112,7 @@ class Interactive_serial(object):
                                 
                     else:
                         self.ser.write(('S' + str(2) + str(0) + str(0) + str(0) + str(Station.pitch_angle) + str(Station.roll_flag) + str(Station.roll_angle) + 'E').encode("utf-8"))
+                    
                     print("deviation_x: ", Station.deviation_x)
                     print("direction: ", Station.direction)
                     print("pitch_angle: ", Station.pitch_angle)
@@ -134,17 +138,17 @@ class Interactive_serial(object):
     # 串口接收数据
     def receive_data(self):
         while True:
-            time.sleep(0.05)
-            try:
-                print('receive')
+            time.sleep(0.005)
+            try:                
                 data = self.ser.read(1)
                 if data == b'1':
                     Interactive_serial.which_mode = 1
                 else:
                     Interactive_serial.which_mode = 2
-                print("data: ", data)
+                print("Interactive_serial.which_mode: ", Interactive_serial.which_mode)
+                print(" ")
                 self.ser.reset_input_buffer()
-            except:                
+            except EOFError:                
                 self.ser.close()
                 print('Serial Receive Data Error')
-                
+                Interactive_serial.serial_connection(self)

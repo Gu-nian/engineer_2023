@@ -9,7 +9,8 @@ from video_function import mvsdk
 class Video_capture:
     COLS = 1280
     ROWS = 800
-    ExposureTime = 12 * 1000
+    # ExposureTime = 12 * 1000
+    ExposureTime = 20 * 1000
     IS_SAVE_VIDEO = 0
     # 判断相机是否掉线
     CAMERA_OPEN = 0
